@@ -8,21 +8,20 @@ async function saveNumbers(numbersArrays) {
             const exists = await Lottery.findOne({ numbers: numbersArray });
 
             if (!exists) {
-                const count = await Lottery.countDocuments();
-
-                if (count >= 500) {
-                    const oldestRecord = await Lottery.findOne().sort({ timestamp: 1 });
-                    if (oldestRecord) {
-                        await Lottery.deleteOne({ _id: oldestRecord._id });
-                        console.log('Đã xóa bản ghi cũ nhất:', oldestRecord.numbers);
-                    }
-                }
-
                 const lotteryRecord = new Lottery({ numbers: numbersArray });
                 await lotteryRecord.save();
                 console.log('Đã lưu:', numbersArray);
-            } else {
-                console.log('Đã tồn tại:', numbersArray);
+            } 
+
+            const count = await Lottery.countDocuments();
+            if (count > 250) {
+                const oldestRecord = await Lottery.findOne().sort({ timestamp: 1 });
+                if (oldestRecord) {
+                    await Lottery.deleteOne({ _id: oldestRecord._id });
+                    console.log('Đã xóa bản ghi cũ nhất:', oldestRecord.numbers);
+                } else {
+                    console.log('Không tìm thấy bản ghi cũ nhất để xóa.');
+                }
             }
         } catch (err) {
             console.error('Lỗi khi lưu vào DB:', err);

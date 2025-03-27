@@ -44,14 +44,19 @@ async function getNumbers() {
     throw new Error('Scraper chưa được khởi tạo');
   }
 
-  await page.waitForSelector('#tableHistory tr:last-child .number', { timeout: 5000 });
+  try {
+    await page.waitForSelector('#tableHistory tr:last-child .number', { timeout: 5000 });
 
-  return await page.$$eval('#tableHistory tr .number', divs => {
-    return divs.map(div => {
-      const spans = div.querySelectorAll('span.opencode');
-      return Array.from(spans).map(span => span.textContent.trim());
+    return await page.$$eval('#tableHistory tr .number', divs => {
+      return divs.map(div => {
+        const spans = div.querySelectorAll('span.opencode');
+        return Array.from(spans).map(span => span.textContent.trim());
+      });
     });
-  });
+  } catch (error) {
+    console.error('Lỗi khi lấy số:', error);
+    throw error; // Ném lại lỗi để xử lý ở nơi khác nếu cần
+  }
 }
 
 async function close() {

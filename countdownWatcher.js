@@ -1,4 +1,6 @@
 const puppeteer = require('puppeteer-core');
+const { predictNextArray } = require('./predictNextNumber')
+const getLotteryNumbers = require('./getLotteryNumbers')
 
 async function watchCountdown() {
   const browser = await puppeteer.launch({
@@ -30,7 +32,10 @@ async function watchCountdown() {
 
   console.log("Tìm thấy mục 'Miền Bắc VIP 45 giây', bắt đầu theo dõi countdown...");
 
-  // Chạy liên tục, không đóng trình duyệt
+  let lastCountdown = "";
+  let isPredicting = false;
+  let hasPredicted = false;  // New flag to track if prediction has been made
+
   setInterval(async () => {
     if (page.isClosed()) return;
 
@@ -46,12 +51,37 @@ async function watchCountdown() {
     }, targetIndex);
 
     if (timeValues) {
-      console.log("Thời gian đếm ngược:", timeValues.slice(-2).join(""));
+      const countdown = timeValues.slice(-2).join("");
+      console.log("Thời gian đếm ngược:", countdown);
+
+      // Check if countdown is 30 seconds or more, not already predicting, and hasn't predicted yet
+      if (parseInt(countdown) > 10 && parseInt(countdown) < 30 && !isPredicting && !hasPredicted) {
+        console.log("Đếm ngược bắt đầu từ 30 giây trở lên, gọi predictNextNumber...");
+        isPredicting = true;
+        hasPredicted = true;  // Set flag to true after prediction
+        try {
+          const h = await getLotteryNumbers()
+          const arrays = await predictNextArray(h, [1]);
+          console.log(arrays)
+
+        } catch (error) {
+          console.error("Lỗi khi gọi predictNextNumber:", error);
+        }
+        setTimeout(() => {
+          isPredicting = false;
+        }, 1000);
+      }
+
+      // Reset the prediction flag when countdown resets
+      if (countdown === "00") {
+        hasPredicted = false;
+      }
+
+      lastCountdown = countdown;
     } else {
       console.log("Không tìm thấy countdown!");
     }
   }, 1000);
 }
 
-// Xuất hàm watchCountdown
-module.exports = { watchCountdown }; 
+module.exports = watchCountdown; 

@@ -1,19 +1,19 @@
-const { watchCountdown } = require('./countdownWatcher');
+const watchCountdown = require('./countdownWatcher');
 const connectDB = require('./service/database');
 const scraper = require('./scraper');
-const dataManager = require('./dataManager');
+const saveNumbers = require('./saveNumber');
 
 async function main() {
   try {
     await connectDB();
-
     await scraper.initialize();
+    await watchCountdown()
 
     setInterval(async () => {
       try {
         const opencodeArrays = await scraper.getNumbers();
 
-        await dataManager.saveNumbers(opencodeArrays);
+        await saveNumbers.saveNumbers(opencodeArrays);
       } catch (error) {
         console.error('Lỗi trong lúc lấy hoặc lưu dữ liệu:', error);
       }

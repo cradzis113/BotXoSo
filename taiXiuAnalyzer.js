@@ -1512,8 +1512,8 @@ function calculateSmartNumberWeights(values, taiXiuValues, predictedType, patter
     return weights;
 }
 
-// Export các hàm và đối tượng cần thiết
-export {
+// Thay đổi cú pháp export
+module.exports = {
     createSampleData,
     classifyTaiXiu,
     getValuesAtIndex,

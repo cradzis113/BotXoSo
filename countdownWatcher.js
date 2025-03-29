@@ -52,7 +52,7 @@ async function watchCountdown() {
 
     if (timeValues) {
       const countdown = timeValues.slice(-2).join("");
-      // console.log("Thời gian đếm ngược:", countdown);
+      console.log("Thời gian đếm ngược:", countdown);
 
       // Check if countdown is 30 seconds or more, not already predicting, and hasn't predicted yet
       if (parseInt(countdown) > 10 && parseInt(countdown) < 30 && !isPredicting && !hasPredicted) {

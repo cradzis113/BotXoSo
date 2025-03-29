@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer-core');
-const { predictNextArray } = require('./predictNextNumber')
 const getLotteryNumbers = require('./getLotteryNumbers')
+const { predictNumbers } = require('./taiXiuAnalyzer')
 
 async function watchCountdown() {
   const browser = await puppeteer.launch({
@@ -52,7 +52,7 @@ async function watchCountdown() {
 
     if (timeValues) {
       const countdown = timeValues.slice(-2).join("");
-      console.log("Thời gian đếm ngược:", countdown);
+      // console.log("Thời gian đếm ngược:", countdown);
 
       // Check if countdown is 30 seconds or more, not already predicting, and hasn't predicted yet
       if (parseInt(countdown) > 10 && parseInt(countdown) < 30 && !isPredicting && !hasPredicted) {
@@ -61,7 +61,7 @@ async function watchCountdown() {
         hasPredicted = true;  // Set flag to true after prediction
         try {
           const h = await getLotteryNumbers()
-          const arrays = await predictNextArray(h, [1]);
+          const arrays = await predictNumbers(h, [0], 100, "taixiu_history.txt", false);
           console.log(arrays)
 
         } catch (error) {

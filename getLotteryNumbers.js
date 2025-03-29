@@ -2,8 +2,9 @@ const Lottery = require('./model/lotteryModel');
 
 async function getLotteryNumbers() {
     try {
-        const records = await Lottery.find({}, 'numbers');
-        return records.map(record => record.numbers);
+        // Không chỉ định trường cụ thể để lấy tất cả dữ liệu
+        const records = await Lottery.find().sort({ createdAt: -1 });
+        return records;
     } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
         return [];

@@ -8,9 +8,9 @@ let page = null;
 async function initialize() {
   browser = await puppeteer.launch({
     executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    headless: true, 
+    headless: true,
     defaultViewport: null,
-    args: ['--disable-blink-features=AutomationControlled'] 
+    args: ['--disable-blink-features=AutomationControlled']
   });
 
   page = await browser.newPage();
@@ -25,7 +25,7 @@ async function autoScroll(page) {
   await page.evaluate(async () => {
     await new Promise(resolve => {
       let totalHeight = 0;
-      const distance = 500; 
+      const distance = 500;
       const timer = setInterval(() => {
         window.scrollBy(0, distance);
         totalHeight += distance;
@@ -34,7 +34,7 @@ async function autoScroll(page) {
           clearInterval(timer);
           resolve();
         }
-      }, 100);
+      }, 200);
     });
   });
 }
@@ -47,15 +47,31 @@ async function getNumbers() {
   try {
     await page.waitForSelector('#tableHistory tr:last-child .number', { timeout: 5000 });
 
-    return await page.$$eval('#tableHistory tr .number', divs => {
-      return divs.map(div => {
-        const spans = div.querySelectorAll('span.opencode');
-        return Array.from(spans).map(span => span.textContent.trim());
+    const tableData = await page.$$eval('#tableHistory tr:not(:first-child)', rows => {
+      return rows.map(row => {
+        const columns = row.querySelectorAll('td');
+        if (columns.length >= 3) {
+          const drawId = columns[0].textContent.trim();
+          
+          const numberCell = columns[1];
+          const spans = numberCell.querySelectorAll('span.opencode');
+          const numbers = Array.from(spans).map(span => span.textContent.trim());
+          
+          const drawTime = columns[2].textContent.trim();
+          
+          return {
+            drawId: drawId,
+            numbers: numbers,
+            drawTime: drawTime
+          };
+        }
+        return null;
       });
     });
+    return tableData;
   } catch (error) {
     console.error('Lỗi khi lấy số:', error);
-    throw error; // Ném lại lỗi để xử lý ở nơi khác nếu cần
+    throw error;
   }
 }
 

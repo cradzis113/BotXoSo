@@ -523,6 +523,375 @@ function generatePrediction(result) {
 }
 
 /**
+ * Hàm dự đoán cải tiến - dự đoán số dựa trên phân tích dữ liệu lịch sử
+ * @param {Array} data - Mảng dữ liệu đầu vào do người dùng chỉ định
+ * @param {Array} indexes - Vị trí cần dự đoán
+ * @param {number} limit - Giới hạn số mẫu gần nhất được sử dụng
+ * @param {string|Array} outputFile - Đường dẫn file xuất hoặc [đường dẫn, giới hạn]
+ * @param {boolean} verbose - Hiển thị log chi tiết
+ * @param {Array} actualResults - Kết quả thực tế để so sánh (nếu có)
+ * @returns {Object} Kết quả dự đoán và thống kê
+ */
+async function predictWithCustomData(data, indexes = [0], limit = 20, outputFile = false, verbose = false, actualResults = null) {
+    try {
+        // Khởi tạo tất cả các biến ngay từ đầu
+        const predictions = [];
+        const analysisInfo = {};
+        let exportSuccess = false;
+        let comparisonResult = null;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            if (verbose) console.error("Dữ liệu không hợp lệ");
+            // Trả về mảng null cho mỗi index
+            indexes.forEach(() => predictions.push(null));
+            return { 
+                predictions, 
+                analysis: analysisInfo, 
+                comparison: comparisonResult,
+                exportSuccess
+            };
+        }
+
+        // Xác định nguồn dữ liệu và kích thước mẫu
+        if (verbose) console.log(`Phân tích ${Math.min(data.length, limit)} mẫu từ ${data.length} bản ghi`);
+
+        // Giới hạn số lượng mẫu theo yêu cầu - lấy từ cuối để có dữ liệu mới nhất
+        const limitedData = limit > 0 && data.length > limit
+            ? data.slice(-limit)
+            : data;
+
+        // Đọc lịch sử dự đoán
+        let recentPredictions = [];
+        let historicalResult = {};
+        let previousCorrectRatio = 0;
+        
+        // Phân tích file lịch sử để tìm ra xu hướng đúng sai
+        try {
+            if (outputFile) {
+                const fs = require('fs');
+                const fsPromises = require('fs').promises;
+                try {
+                    const filePath = typeof outputFile === 'string' ? outputFile :
+                        (Array.isArray(outputFile) && outputFile.length > 0 ? outputFile[0] : "taixiu_history.txt");
+
+                    // Kiểm tra file tồn tại
+                    try {
+                        await fsPromises.access(filePath, fs.constants.F_OK);
+                        const fileContent = await fsPromises.readFile(filePath, 'utf8');
+
+                        // Tìm tỷ lệ dự đoán đúng hiện tại
+                        const accuracyMatch = fileContent.match(/ĐÚNG: (\d+)\/(\d+)/);
+                        if (accuracyMatch && accuracyMatch.length >= 3) {
+                            const correct = parseInt(accuracyMatch[1]);
+                            const total = parseInt(accuracyMatch[2]);
+                            if (total > 0) {
+                                previousCorrectRatio = correct / total;
+                            }
+                        }
+
+                        // Phân tích các block dự đoán gần đây
+                        const blocks = fileContent.split('-----------------------------------').filter(block => block.trim());
+                        const recentBlocks = blocks.slice(-20); // Lấy 20 block gần nhất
+                        
+                        // Tìm các xu hướng dự đoán và kết quả
+                        for (const block of recentBlocks) {
+                            const predictionMatch = block.match(/Vị trí 0: (\d+) \((tài|xỉu)\)/);
+                            const resultMatch = block.match(/Kết quả: \[([\d, ]+)\]/);
+                            const cycleMatch = block.match(/Chu kỳ hiện tại: (\d+)/);
+                            
+                            if (predictionMatch && resultMatch && cycleMatch) {
+                                const cycleId = cycleMatch[1];
+                                const predictedNumber = parseInt(predictionMatch[1]);
+                                const predictedType = predictionMatch[2];
+                                const results = resultMatch[1].split(',').map(n => parseInt(n.trim()));
+                                
+                                if (results.length > 0) {
+                                    const actualNumber = results[0];
+                                    const actualType = actualNumber >= 5 ? 'tài' : 'xỉu';
+                                    
+                                    historicalResult[cycleId] = {
+                                        predicted: predictedNumber,
+                                        predictedType,
+                                        actual: actualNumber,
+                                        actualType,
+                                        isCorrect: predictedType === actualType
+                                    };
+                                    
+                                    recentPredictions.push({
+                                        number: predictedNumber,
+                                        type: predictedType,
+                                        correct: predictedType === actualType
+                                    });
+                                }
+                            }
+                        }
+                    } catch (fileError) {
+                        // File không tồn tại, bỏ qua
+                    }
+                } catch (fsError) {
+                    // Lỗi khi đọc file, bỏ qua
+                }
+            }
+        } catch (recentError) {
+            // Bỏ qua lỗi khi đọc lịch sử
+        }
+
+        // Phân tích xu hướng đúng/sai gần đây
+        const recentCorrect = recentPredictions.filter(p => p.correct).length;
+        const recentTotal = recentPredictions.length;
+        const recentCorrectRatio = recentTotal > 0 ? recentCorrect / recentTotal : 0;
+        
+        // Phân tích xu hướng tài/xỉu gần đây
+        const recentTai = recentPredictions.filter(p => p.type === 'tài').length;
+        const recentXiu = recentPredictions.filter(p => p.type === 'xỉu').length;
+        
+        // Điều chỉnh chiến lược dựa trên tỷ lệ đúng sai
+        const taiXiuBias = recentTai > recentXiu * 1.5 ? 'tài' : 
+                         (recentXiu > recentTai * 1.5 ? 'xỉu' : null);
+        
+        // Phát hiện xu hướng quá lệch
+        const overBias = (taiXiuBias === 'tài' && recentTai > recentXiu * 2) || 
+                        (taiXiuBias === 'xỉu' && recentXiu > recentTai * 2);
+        
+        // Dự đoán cho từng vị trí được yêu cầu
+        for (const index of indexes) {
+            // Khởi tạo thông tin phân tích
+            analysisInfo[index] = {};
+
+            // Trích xuất giá trị tại vị trí cần phân tích
+            const values = limitedData.map(item => {
+                // Hỗ trợ nhiều định dạng dữ liệu đầu vào
+                if (item.numbers && Array.isArray(item.numbers)) {
+                    return item.numbers[index];
+                } else if (Array.isArray(item)) {
+                    return item[index];
+                } else if (typeof item === 'object' && item[`pos${index}`] !== undefined) {
+                    return item[`pos${index}`];
+                } else {
+                    return null;
+                }
+            }).filter(v => v !== null && v !== undefined);
+
+            if (values.length === 0) {
+                if (verbose) console.error(`Không tìm thấy dữ liệu cho vị trí ${index}`);
+                predictions.push(null);
+                continue;
+            }
+
+            // Phân loại tài xỉu
+            const taiXiuValues = values.map(val => classifyTaiXiu(val));
+
+            // Phân tích cầu hiện tại
+            let streak = 1;
+            let streakType = taiXiuValues[taiXiuValues.length - 1];
+
+            for (let i = taiXiuValues.length - 2; i >= 0; i--) {
+                if (taiXiuValues[i] === streakType) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+
+            // Lưu thông tin cầu
+            analysisInfo[index].streak = { type: streakType, length: streak };
+
+            // Phân tích thống kê
+            let taiCount = 0;
+            let xiuCount = 0;
+            for (const type of taiXiuValues) {
+                if (type === 'tài') taiCount++;
+                else xiuCount++;
+            }
+            
+            const taiPercent = (taiCount / taiXiuValues.length * 100).toFixed(2);
+            const xiuPercent = (xiuCount / taiXiuValues.length * 100).toFixed(2);
+            
+            analysisInfo[index].taiXiuStats = {
+                taiCount,
+                xiuCount,
+                taiPercent,
+                xiuPercent
+            };
+
+            // Phát hiện mẫu đặc biệt
+            const isPattern3 = streak >= 3; // Có cầu ít nhất 3 lần liên tục
+            const isAlternating = taiXiuValues.length >= 4 &&
+                taiXiuValues[taiXiuValues.length-1] !== taiXiuValues[taiXiuValues.length-2] &&
+                taiXiuValues[taiXiuValues.length-2] !== taiXiuValues[taiXiuValues.length-3] &&
+                taiXiuValues[taiXiuValues.length-3] !== taiXiuValues[taiXiuValues.length-4];
+
+            // Xác định xác suất bẻ cầu
+            let breakProb = 0.5; // Mặc định 50%
+            
+            // Điều chỉnh xác suất theo độ dài cầu
+            if (streak <= 2) breakProb = 0.35;
+            else if (streak === 3) breakProb = 0.45;
+            else if (streak === 4) breakProb = 0.55;
+            else if (streak >= 5) breakProb = 0.65;
+            
+            // Điều chỉnh theo lịch sử đúng/sai
+            if (recentCorrectRatio < 0.4) {
+                // Nếu tỷ lệ đúng gần đây quá thấp, thử nghịch lại chiến lược
+                breakProb = 1 - breakProb;
+            }
+            
+            // Điều chỉnh nếu phát hiện thiên lệch
+            if (overBias && taiXiuBias === streakType) {
+                // Nếu đang thiên lệch quá nhiều về một phía và đang có cầu cùng phía đó
+                breakProb += 0.15; // Tăng khả năng bẻ cầu
+            }
+            
+            // Hiệu chỉnh để đảm bảo giới hạn 0.1 - 0.9
+            breakProb = Math.max(0.1, Math.min(0.9, breakProb));
+            
+            // Quyết định dự đoán
+            let predictedType;
+            let decisionMethod;
+            
+            // Ưu tiên các mẫu đặc biệt trước
+            if (isPattern3 && streak >= 3) {
+                // Cầu 3 liên tiếp trở lên thường bẻ
+                predictedType = streakType === 'tài' ? 'xỉu' : 'tài';
+                decisionMethod = "pattern3";
+                
+                // Tăng độ tin cậy
+                breakProb = 0.7;
+            } else if (isAlternating) {
+                // Đã có dãy xen kẽ, dự đoán tiếp tục xen kẽ
+                predictedType = taiXiuValues[taiXiuValues.length-1] === 'tài' ? 'xỉu' : 'tài';
+                decisionMethod = "alternating";
+                breakProb = 0.75;
+            } else {
+                // Quyết định thông thường
+                const shouldBreak = Math.random() < breakProb;
+                
+                if (shouldBreak) {
+                    predictedType = streakType === 'tài' ? 'xỉu' : 'tài';
+                    decisionMethod = "break";
+                } else {
+                    predictedType = streakType;
+                    decisionMethod = "follow";
+                }
+            }
+            
+            // Thống kê phân phối số theo từng loại
+            const numberFreq = Array(10).fill(0);
+            for (const val of values) {
+                numberFreq[val]++;
+            }
+            
+            // Tìm số theo loại dự đoán
+            let candidateNumbers = [];
+            for (let num = 0; num < 10; num++) {
+                if ((num >= 5 && predictedType === 'tài') || (num < 5 && predictedType === 'xỉu')) {
+                    candidateNumbers.push({
+                        number: num,
+                        freq: numberFreq[num],
+                        weight: 0
+                    });
+                }
+            }
+            
+            // Tính trọng số cho từng số ứng viên
+            for (let candidate of candidateNumbers) {
+                // Trọng số dựa trên tần suất xuất hiện
+                candidate.weight = candidate.freq;
+                
+                // Bonus cho số xuất hiện gần đây
+                for (let i = 0; i < Math.min(10, values.length); i++) {
+                    if (values[values.length - 1 - i] === candidate.number) {
+                        candidate.weight += 0.5 * Math.pow(0.9, i);
+                    }
+                }
+                
+                // Khuyến khích đa dạng, giảm trọng số cho số dự đoán gần đây
+                for (let i = 0; i < Math.min(5, recentPredictions.length); i++) {
+                    if (recentPredictions[recentPredictions.length - 1 - i].number === candidate.number) {
+                        candidate.weight *= 0.8;
+                    }
+                }
+                
+                // Thêm yếu tố ngẫu nhiên để tránh bị kẹt
+                candidate.weight += Math.random();
+            }
+            
+            // Sắp xếp theo weight giảm dần
+            candidateNumbers.sort((a, b) => b.weight - a.weight);
+            
+            // Lấy 3 ứng viên hàng đầu
+            const topCandidates = candidateNumbers.slice(0, 3);
+            analysisInfo[index].candidates = topCandidates;
+            
+            // Chọn số dự đoán
+            let selectedNumber;
+            
+            // 70% chọn vị trí đầu tiên, 20% chọn vị trí thứ hai, 10% chọn vị trí thứ ba
+            const randomChoice = Math.random();
+            if (randomChoice < 0.7 && topCandidates.length > 0) {
+                selectedNumber = topCandidates[0].number;
+            } else if (randomChoice < 0.9 && topCandidates.length > 1) {
+                selectedNumber = topCandidates[1].number;
+            } else if (topCandidates.length > 2) {
+                selectedNumber = topCandidates[2].number;
+            } else if (topCandidates.length > 0) {
+                selectedNumber = topCandidates[0].number;
+            } else {
+                // Fallback nếu không có ứng viên phù hợp
+                selectedNumber = predictedType === 'tài' ? 7 : 2;
+            }
+            
+            // Lưu thông tin quyết định
+            analysisInfo[index].decision = {
+                method: decisionMethod,
+                type: predictedType,
+                probability: decisionMethod === "break" ? breakProb : (1 - breakProb),
+                reasoning: `Cầu ${streak} ${streakType}, tỷ lệ trước đó: ${recentCorrectRatio.toFixed(2)}`
+            };
+            
+            // Thêm vào kết quả
+            predictions.push(selectedNumber);
+        }
+
+        // Xuất kết quả ra file nếu cần
+        if (outputFile) {
+            try {
+                if (typeof outputFile === 'string') {
+                    exportSuccess = await exportPrediction(data, predictions, outputFile, analysisInfo, indexes);
+                } else if (Array.isArray(outputFile)) {
+                    exportSuccess = await exportPrediction(data, predictions, outputFile, analysisInfo, indexes);
+                    
+                    // Nếu có giới hạn số lượng, áp dụng việc cắt bớt lịch sử
+                    if (outputFile.length > 1 && typeof outputFile[1] === 'number' && outputFile[1] > 0) {
+                        await trimHistoryFile(outputFile[0], outputFile[1]);
+                    }
+                }
+            } catch (exportError) {
+                if (verbose) console.error("Lỗi khi xuất dự đoán:", exportError.message);
+            }
+        }
+
+        // Trả về kết quả đầy đủ
+        return {
+            predictions,
+            analysis: analysisInfo,
+            comparison: comparisonResult,
+            exportSuccess
+        };
+    } catch (error) {
+        console.error("Lỗi khi thực hiện dự đoán:", error.message);
+        // Trả về đối tượng mặc định
+        return { 
+            predictions: indexes.map(() => null), 
+            analysis: {}, 
+            comparison: null,
+            exportSuccess: false
+        };
+    }
+}
+
+/**
  * Xuất dự đoán mới nhất và lưu lịch sử các dự đoán, tự động giới hạn số lượng
  * Bổ sung: So sánh kết quả dự đoán trước đó với kết quả thực tế
  * @param {Array} data - Mảng dữ liệu đầu vào
@@ -643,9 +1012,6 @@ async function exportPrediction(data, predictedNumbers, outputPath = "taixiu_his
                 }
             }
             
-            // In thông tin debug
-            console.log(`Đọc được ${Object.keys(predictions).length} dự đoán và ${Object.keys(results).length} kết quả từ file.`);
-            
             // --- Tính toán độ chính xác dựa trên dự đoán và kết quả ---
             
             // Duyệt qua tất cả các dự đoán
@@ -667,14 +1033,10 @@ async function exportPrediction(data, predictedNumbers, outputPath = "taixiu_his
                             if (pred.type === actualResult.type) {
                                 totalCorrect++;
                             }
-                            
-                            console.log(`Cycle ${cycleId}, Pos ${position}: Predicted ${pred.number} (${pred.type}), Actual ${actualResult.number} (${actualResult.type}) - ${pred.type === actualResult.type ? 'CORRECT' : 'WRONG'}`);
                         }
                     }
                 }
             }
-            
-            console.log(`Tổng kết: ${totalCorrect}/${totalPredictions} dự đoán đúng.`);
         }
         
         // Tạo thông tin độ chính xác
@@ -815,6 +1177,53 @@ async function exportPrediction(data, predictedNumbers, outputPath = "taixiu_his
 }
 
 /**
+ * Cập nhật file lịch sử để chỉ giữ lại n mục gần nhất
+ * @param {string} filePath - Đường dẫn đến file lịch sử
+ * @param {number} limit - Số lượng lịch sử gần nhất cần giữ lại
+ * @returns {Promise<boolean>} Kết quả thực hiện
+ */
+async function trimHistoryFile(filePath, limit) {
+    try {
+        const fs = require('fs');
+        const fsPromises = require('fs').promises;
+
+        // Đọc nội dung file
+        let fileContent = "";
+        try {
+            fileContent = await fsPromises.readFile(filePath, 'utf8');
+        } catch (err) {
+            // Bỏ qua thông báo chi tiết, chỉ trả về false
+            return false;
+        }
+
+        // Tách header và nội dung chính
+        const headerEndIndex = fileContent.indexOf('===================') + 20;
+        const header = fileContent.substring(0, headerEndIndex);
+        const content = fileContent.substring(headerEndIndex);
+
+        // Tách các mục dự đoán dựa trên dấu hiệu phân cách
+        const separator = "-----------------------------------";
+        const predictions = content.split(separator)
+            .filter(part => part.trim().length > 0)
+            .map(part => separator + part);
+
+        // Lấy n mục gần nhất
+        const recentPredictions = predictions.slice(-limit);
+
+        // Tạo nội dung mới cho file
+        const newContent = header + recentPredictions.join('');
+
+        // Ghi nội dung mới vào file
+        await fsPromises.writeFile(filePath, newContent);
+
+        return true;
+    } catch (error) {
+        console.error(`Lỗi khi cập nhật file lịch sử: ${error.message}`);
+        return false;
+    }
+}
+
+/**
  * Kiểm tra độ chính xác của dự đoán trước đó so với kết quả thực tế
  * @param {string} filePath - Đường dẫn file lịch sử
  * @param {Object} latestData - Dữ liệu kết quả mới nhất
@@ -835,7 +1244,8 @@ async function checkPreviousPredictionAccuracy(filePath, latestData, indexes) {
     }
 
     try {
-        const fs = await import('fs/promises');
+        const fs = require('fs');
+        const fsPromises = require('fs').promises;
 
         // Lấy drawId hiện tại và trước đó
         const currentDrawId = parseInt(latestData.drawId);
@@ -844,7 +1254,7 @@ async function checkPreviousPredictionAccuracy(filePath, latestData, indexes) {
         // Đọc file lịch sử
         let fileContent;
         try {
-            fileContent = await fs.readFile(filePath, 'utf8');
+            fileContent = await fsPromises.readFile(filePath, 'utf8');
         } catch (err) {
             // Nếu file không tồn tại, không có dự đoán trước đó
             return result;
@@ -907,492 +1317,9 @@ async function checkPreviousPredictionAccuracy(filePath, latestData, indexes) {
 
         return result;
     } catch (error) {
-        console.error(`Lỗi khi kiểm tra dự đoán trước đó: ${error.message}`);
+        // Không in log chi tiết về lỗi, chỉ trả về kết quả mặc định
         return result;
     }
-}
-
-/**
- * Cập nhật file lịch sử để chỉ giữ lại n mục gần nhất
- * @param {string} filePath - Đường dẫn đến file lịch sử
- * @param {number} limit - Số lượng lịch sử gần nhất cần giữ lại
- * @returns {Promise<boolean>} Kết quả thực hiện
- */
-async function trimHistoryFile(filePath, limit) {
-    try {
-        const fs = await import('fs/promises');
-
-        // Đọc nội dung file
-        let fileContent = "";
-        try {
-            fileContent = await fs.readFile(filePath, 'utf8');
-        } catch (err) {
-            console.error(`Không thể đọc file lịch sử: ${err.message}`);
-            return false;
-        }
-
-        // Tách header và nội dung chính
-        const headerEndIndex = fileContent.indexOf('===================') + 20;
-        const header = fileContent.substring(0, headerEndIndex);
-        const content = fileContent.substring(headerEndIndex);
-
-        // Tách các mục dự đoán dựa trên dấu hiệu phân cách
-        const separator = "-----------------------------------";
-        const predictions = content.split(separator)
-            .filter(part => part.trim().length > 0)
-            .map(part => separator + part);
-
-        // Lấy n mục gần nhất
-        const recentPredictions = predictions.slice(-limit);
-
-        // Tạo nội dung mới cho file
-        const newContent = header + recentPredictions.join('');
-
-        // Ghi nội dung mới vào file
-        await fs.writeFile(filePath, newContent);
-        console.log(`Đã cập nhật file lịch sử, giữ lại ${recentPredictions.length} mục gần nhất`);
-
-        return true;
-    } catch (error) {
-        console.error(`Lỗi khi cập nhật file lịch sử: ${error.message}`);
-        return false;
-    }
-}
-
-/**
- * Hàm dự đoán cải tiến - dự đoán số dựa trên phân tích dữ liệu lịch sử
- * @param {Array} data - Mảng dữ liệu đầu vào do người dùng chỉ định
- * @param {Array} indexes - Vị trí cần dự đoán
- * @param {number} limit - Giới hạn số mẫu gần nhất được sử dụng
- * @param {string|Array} outputFile - Đường dẫn file xuất hoặc [đường dẫn, giới hạn]
- * @param {boolean} verbose - Hiển thị log chi tiết
- * @param {Array} actualResults - Kết quả thực tế để so sánh (nếu có)
- * @returns {Object} Kết quả dự đoán và thống kê
- */
-async function predictWithCustomData(data, indexes = [0], limit = 20, outputFile = false, verbose = false, actualResults = null) {
-    if (!data || !Array.isArray(data) || data.length === 0) {
-        console.error("Dữ liệu không hợp lệ");
-        return { predictions: indexes.map(() => null), stats: null };
-    }
-
-    // Xác định nguồn dữ liệu và kích thước mẫu
-    console.log(`Phân tích ${Math.min(data.length, limit)} mẫu từ ${data.length} bản ghi`);
-
-    // Thêm biến chu kỳ ở đây để đảm bảo được định nghĩa trong toàn bộ phạm vi hàm
-    const cycleFound = false; // Mặc định là false vì chưa có logic phát hiện chu kỳ
-    const cyclePrediction = null; // Giá trị mặc định
-
-    // Giới hạn số lượng mẫu theo yêu cầu
-    const limitedData = limit > 0 && data.length > limit
-        ? data.slice(Math.max(0, data.length - limit))
-        : data;
-
-    // Kết quả dự đoán
-    const predictions = [];
-    const analysisInfo = {};
-
-    // Thêm biến theo dõi xu hướng dự đoán toàn cục
-    let recentPredictions = [];
-    try {
-        // Đọc 10 dự đoán gần nhất từ file lịch sử nếu có
-        if (outputFile) {
-            const fs = await import('fs/promises');
-            try {
-                const filePath = typeof outputFile === 'string' ? outputFile :
-                    (Array.isArray(outputFile) && outputFile.length > 0 ? outputFile[0] : "taixiu_history.txt");
-
-                const fileContent = await fs.readFile(filePath, 'utf8');
-
-                // Tìm các dự đoán gần nhất
-                const matches = [...fileContent.matchAll(/Vị trí \d+: (\d+) \((tài|xỉu)\)/g)];
-                recentPredictions = matches.slice(-10).map(match => {
-                    return {
-                        number: parseInt(match[1]),
-                        type: match[2]
-                    };
-                });
-            } catch (err) {
-                // Không tìm thấy file, bỏ qua
-            }
-        }
-    } catch (error) {
-        // Bỏ qua lỗi khi đọc file
-    }
-
-    // Phân tích xu hướng dự đoán gần đây
-    const recentTai = recentPredictions.filter(p => p.type === 'tài').length;
-    const recentXiu = recentPredictions.filter(p => p.type === 'xỉu').length;
-    const xiuBias = recentXiu > recentTai * 1.5; // Phát hiện xu hướng thiên về xỉu
-    const numberThree = recentPredictions.filter(p => p.number === 3).length;
-    const threeOverused = numberThree >= 3; // Phát hiện số 3 xuất hiện quá nhiều
-
-    // Dự đoán cho từng vị trí được yêu cầu
-    for (const index of indexes) {
-        // Khởi tạo thông tin phân tích
-        analysisInfo[index] = {};
-
-        // Trích xuất giá trị tại vị trí cần phân tích
-        const values = limitedData.map(item => {
-            // Hỗ trợ nhiều định dạng dữ liệu đầu vào
-            if (item.numbers && Array.isArray(item.numbers)) {
-                return item.numbers[index];
-            } else if (Array.isArray(item)) {
-                return item[index];
-            } else if (typeof item === 'object' && item[`pos${index}`] !== undefined) {
-                return item[`pos${index}`];
-            } else {
-                return null;
-            }
-        }).filter(v => v !== null && v !== undefined);
-
-        if (values.length === 0) {
-            console.error(`Không tìm thấy dữ liệu cho vị trí ${index}`);
-            predictions.push(null);
-            continue;
-        }
-
-        // Phân loại tài xỉu
-        const taiXiuValues = values.map(val => classifyTaiXiu(val));
-
-        // ----- PHÂN TÍCH CẦU HIỆN TẠI -----
-        // Lấy các giá trị gần đây nhất để phân tích mẫu
-        const recentValues = taiXiuValues.slice(-50);
-        const recentNumbers = values.slice(-50);
-
-        // Phân tích cầu hiện tại
-        let streak = 1;
-        let streakType = recentValues[recentValues.length - 1];
-
-        for (let i = recentValues.length - 2; i >= 0; i--) {
-            if (recentValues[i] === streakType) {
-                streak++;
-            } else {
-                break;
-            }
-        }
-
-        // Lưu thông tin cầu
-        analysisInfo[index].streak = { type: streakType, length: streak };
-
-        if (verbose) {
-            console.log(`Vị trí ${index}: Cầu ${streak} ${streakType}`);
-        }
-
-        // ----- CẢI TIẾN: TĂNG CƯỜNG PHÁT HIỆN MẪU CẦU ĐẶC BIỆT -----
-        // Phân tích cầu bệt và cầu 22 ưu tiên sớm hơn
-        let betPattern = false;     // Cầu bệt: 3 giá trị giống nhau liên tiếp
-        let pattern22 = false;      // Cầu 22: 2 tài rồi 2 xỉu hoặc ngược lại
-        let betPatternDirection = null;  // Hướng sau cầu bệt
-        let pattern22Direction = null;   // Hướng sau cầu 22
-
-        // Kiểm tra cầu bệt - 3 giá trị giống nhau liên tiếp
-        if (recentValues.length >= 3) {
-            const last3 = recentValues.slice(-3);
-            if (last3[0] === last3[1] && last3[1] === last3[2]) {
-                betPattern = true;
-
-                // Phân tích xu hướng sau cầu bệt từ dữ liệu lịch sử
-                let betFollowedByOpposite = 0;
-                let betFollowedBySame = 0;
-
-                for (let i = 0; i < recentValues.length - 3; i++) {
-                    // Tìm các cầu bệt trong lịch sử
-                    if (recentValues[i] === recentValues[i + 1] && recentValues[i + 1] === recentValues[i + 2]) {
-                        // Kiểm tra giá trị sau cầu bệt (nếu có)
-                        if (i + 3 < recentValues.length) {
-                            if (recentValues[i + 3] === recentValues[i]) {
-                                betFollowedBySame++;
-                            } else {
-                                betFollowedByOpposite++;
-                            }
-                        }
-                    }
-                }
-
-                // Xác định xu hướng sau cầu bệt
-                if (betFollowedByOpposite > betFollowedBySame) {
-                    betPatternDirection = streakType === 'tài' ? 'xỉu' : 'tài';
-                } else if (betFollowedBySame > betFollowedByOpposite) {
-                    betPatternDirection = streakType;
-                }
-
-                if (verbose) {
-                    console.log(`Phát hiện cầu bệt: ${last3.join('-')}`);
-                    console.log(`Sau cầu bệt: Đổi chiều ${betFollowedByOpposite}, Giữ nguyên ${betFollowedBySame}`);
-                    console.log(`Dự đoán hướng sau cầu bệt: ${betPatternDirection || 'Không rõ'}`);
-                }
-            }
-        }
-
-        // Kiểm tra cầu 22 - 2 giá trị A, rồi 2 giá trị B
-        if (recentValues.length >= 4) {
-            const last4 = recentValues.slice(-4);
-            if (last4[0] === last4[1] && last4[2] === last4[3] && last4[0] !== last4[2]) {
-                pattern22 = true;
-
-                // Phân tích xu hướng sau cầu 22
-                let pattern22FollowedByFirst = 0;  // Giống với cặp đầu tiên
-                let pattern22FollowedBySecond = 0; // Giống với cặp thứ hai
-
-                for (let i = 0; i < recentValues.length - 4; i++) {
-                    // Tìm các cầu 22 trong lịch sử
-                    if (recentValues[i] === recentValues[i + 1] &&
-                        recentValues[i + 2] === recentValues[i + 3] &&
-                        recentValues[i] !== recentValues[i + 2]) {
-
-                        // Kiểm tra giá trị sau cầu 22 (nếu có)
-                        if (i + 4 < recentValues.length) {
-                            if (recentValues[i + 4] === recentValues[i]) {
-                                pattern22FollowedByFirst++;
-                            } else if (recentValues[i + 4] === recentValues[i + 2]) {
-                                pattern22FollowedBySecond++;
-                            }
-                        }
-                    }
-                }
-
-                // Xác định xu hướng sau cầu 22
-                if (pattern22FollowedByFirst > pattern22FollowedBySecond) {
-                    pattern22Direction = last4[0] === 'tài' ? 'tài' : 'xỉu';
-                } else if (pattern22FollowedBySecond > pattern22FollowedByFirst) {
-                    pattern22Direction = last4[2] === 'tài' ? 'tài' : 'xỉu';
-                }
-
-                if (verbose) {
-                    console.log(`Phát hiện cầu 22: ${last4.join('-')}`);
-                    console.log(`Sau cầu 22: Quay lại ${pattern22FollowedByFirst}, Tiếp tục ${pattern22FollowedBySecond}`);
-                    console.log(`Dự đoán hướng sau cầu 22: ${pattern22Direction || 'Không rõ'}`);
-                }
-            }
-        }
-
-        // ----- THUẬT TOÁN QUYẾT ĐỊNH -----
-        // Dựa trên độ dài cầu hiện tại và xu hướng
-
-        // 1. Xác suất bẻ cầu cơ bản dựa trên độ dài
-        const defaultBreakProbs = {
-            1: 0.35, 2: 0.4, 3: 0.45, 4: 0.5, 5: 0.55,
-            6: 0.6, 7: 0.65, 8: 0.7, 9: 0.75, 10: 0.8
-        };
-
-        let breakProb = defaultBreakProbs[streak] ||
-            (0.5 + Math.min(0.3, (streak - 5) * 0.05));
-
-        // 2. Điều chỉnh dựa trên xu hướng
-        // Nếu đang có cầu theo xu hướng chính -> giảm xác suất bẻ
-        if (streakType === 'tài' && streak > 3) {
-            breakProb -= 0.1;
-        } else if (streakType === 'xỉu' && streak > 3) {
-            breakProb -= 0.1;
-        }
-
-        // 3. Quyết định cuối cùng - ưu tiên mẫu cầu đặc biệt đã phát hiện
-        let predictedType;
-
-        // Ưu tiên cao nhất: Cầu 22 và cầu bệt nếu phát hiện hướng rõ ràng
-        if (pattern22 && pattern22Direction) {
-            predictedType = pattern22Direction;
-            analysisInfo[index].decision = {
-                method: "pattern22",
-                type: predictedType,
-                probability: 0.75 // Tỉ lệ tin cậy cao
-            };
-            if (verbose) {
-                console.log(`Quyết định theo cầu 22: ${predictedType}`);
-            }
-        }
-        else if (betPattern && betPatternDirection) {
-            predictedType = betPatternDirection;
-            analysisInfo[index].decision = {
-                method: "bet_pattern",
-                type: predictedType,
-                probability: 0.7 // Tỉ lệ tin cậy khá cao
-            };
-            if (verbose) {
-                console.log(`Quyết định theo cầu bệt: ${predictedType}`);
-            }
-        }
-        // Ưu tiên thứ hai: Nếu phát hiện chu kỳ lặp lại
-        else if (cycleFound) {
-            predictedType = cyclePrediction;
-            analysisInfo[index].decision = {
-                method: "cycle_pattern",
-                type: predictedType,
-                probability: 0.65
-            };
-        }
-        // Nếu không có mẫu đặc biệt, áp dụng quyết định bình thường
-        else {
-            // Quyết định bẻ cầu dựa trên xác suất đã tính
-            let shouldBreak = Math.random() < breakProb;
-
-            // Cân bằng thiên vị - nếu gần đây toàn xỉu, tăng khả năng ra tài
-            if (xiuBias && streakType === 'xỉu') {
-                breakProb += 0.2;
-                shouldBreak = Math.random() < breakProb;
-            }
-
-            if (shouldBreak) {
-                predictedType = streakType === 'tài' ? 'xỉu' : 'tài';
-                analysisInfo[index].decision = {
-                    method: "break",
-                    probability: breakProb || 0,
-                    type: predictedType
-                };
-            } else {
-                predictedType = streakType;
-                analysisInfo[index].decision = {
-                    method: "follow",
-                    probability: (1 - breakProb) || 0,
-                    type: predictedType
-                };
-            }
-        }
-
-        // ----- CHỌN SỐ THÔNG MINH -----
-        // Cải tiến: Tính trọng số phân phối cho các số thuộc loại đã chọn
-
-        // Tạo bảng trọng số cho từng số
-        const weights = Array(10).fill(0);
-
-        // 1. Phân tích tần suất xuất hiện của các số
-        const numberCounts = Array(10).fill(0);
-        values.forEach(val => numberCounts[val]++);
-
-        // 2. Áp dụng trọng số cho các số thuộc loại đã chọn
-        for (let i = 0; i < 10; i++) {
-            if (classifyTaiXiu(i) === predictedType) {
-                // Trọng số dựa trên tần suất xuất hiện chung
-                weights[i] += numberCounts[i] / 3;
-
-                // Tăng cường trọng số cho các số xuất hiện gần đây
-                for (let j = 0; j < recentNumbers.length; j++) {
-                    if (recentNumbers[recentNumbers.length - 1 - j] === i) {
-                        const recencyWeight = 5 * Math.pow(0.9, j);
-                        weights[i] += recencyWeight;
-                    }
-                }
-
-                // Nếu số 3 đã xuất hiện quá nhiều trong các dự đoán gần đây, giảm trọng số
-                if (i === 3 && threeOverused) {
-                    weights[i] *= 0.5;
-                }
-
-                // Giảm yếu tố ngẫu nhiên
-                weights[i] += Math.random() * 2;
-            }
-        }
-
-        // Cải tiến: Ưu tiên số không lặp lại gần đây
-        const last3Numbers = recentNumbers.slice(-3);
-        for (let i = 0; i < 10; i++) {
-            if (classifyTaiXiu(i) === predictedType) {
-                // Giảm trọng số cho các số xuất hiện gần đây
-                if (last3Numbers.includes(i)) {
-                    weights[i] *= 0.7;
-                }
-            }
-        }
-
-        // Lọc các số thuộc loại dự đoán
-        const candidates = [];
-        for (let i = 0; i < 10; i++) {
-            if (classifyTaiXiu(i) === predictedType) {
-                candidates.push({
-                    number: i,
-                    score: weights[i]  // Dùng score thay vì weight
-                });
-            }
-        }
-
-        // Sắp xếp theo điểm score giảm dần
-        candidates.sort((a, b) => b.score - a.score);
-
-        // Lấy top 3 số ứng viên
-        const topCandidates = candidates.slice(0, 3);
-        analysisInfo[index].candidates = topCandidates;
-
-        if (verbose) {
-            console.log(`Top ứng viên (${predictedType}):`,
-                topCandidates.map(c => `${c.number}: ${c.score.toFixed(2)}`).join(', '));
-        }
-
-        // Trước khi chọn số, tránh xu hướng mắc kẹt trong một loại
-        if (topCandidates.length >= 2 && predictedType === 'xỉu' && xiuBias) {
-            // Nếu đang có xu hướng thiên về xỉu, tránh chọn số có nhiều lần xuất hiện
-            topCandidates.sort((a, b) => {
-                // Số nào ít xuất hiện trong dự đoán gần đây hơn sẽ được ưu tiên
-                const aCount = recentPredictions.filter(p => p.number === a.number).length;
-                const bCount = recentPredictions.filter(p => p.number === b.number).length;
-
-                if (aCount === bCount) {
-                    return b.score - a.score; // Nếu bằng nhau thì chọn theo score
-                }
-                return aCount - bCount; // Ưu tiên số ít xuất hiện hơn
-            });
-        }
-
-        // Thêm một chút nhiễu ngẫu nhiên để tránh mắc kẹt vào mẫu
-        if (topCandidates.length >= 2 && Math.random() < 0.3) {
-            // 30% khả năng chọn ứng viên thứ hai thay vì luôn chọn số cao nhất
-            selectedNumber = topCandidates[1].number;
-
-            if (verbose) {
-                console.log(`Chọn ngẫu nhiên số thứ hai ${selectedNumber} với điểm: ${topCandidates[1].score.toFixed(2)}`);
-            }
-        } else {
-            selectedNumber = topCandidates[0].number;
-
-            if (verbose) {
-                console.log(`Chọn số ${selectedNumber} với điểm cao nhất: ${topCandidates[0].score.toFixed(2)}`);
-            }
-        }
-
-        // Thêm vào kết quả
-        predictions.push(selectedNumber);
-    }
-
-    // Xuất kết quả ra file nếu cần
-    let exportSuccess = false;
-    if (outputFile) {
-        try {
-            if (typeof outputFile === 'string') {
-                exportSuccess = await exportPrediction(data, predictions, outputFile, analysisInfo, indexes);
-            } else if (Array.isArray(outputFile)) {
-                exportSuccess = await exportPrediction(data, predictions, outputFile, analysisInfo, indexes);
-            }
-
-            if (exportSuccess) {
-                console.log(`Đã xuất dự đoán vào file ${Array.isArray(outputFile) ? outputFile[0] : outputFile}`);
-            }
-        } catch (error) {
-            console.error("Lỗi khi xuất dự đoán:", error.message);
-        }
-    }
-
-    // So sánh với kết quả thực tế nếu có
-    let comparisonResult = null;
-    if (actualResults && Array.isArray(actualResults) && actualResults.length > 0) {
-        comparisonResult = compareWithActualResults(predictions, actualResults);
-
-        if (verbose) {
-            console.log("\n=== SO SÁNH VỚI KẾT QUẢ THỰC TẾ ===");
-            console.log(`Độ chính xác: ${comparisonResult.accuracyPercentage} (${comparisonResult.matches}/${comparisonResult.total})`);
-        }
-    }
-
-    // Bổ sung thêm code sau ngay trước khi chọn selectedNumber để ghi lại tỷ lệ chính xác
-    if (verbose) {
-        console.log(`Tỷ lệ thắng với ${limit} mẫu gần nhất: Khoảng 58% (dựa trên kinh nghiệm thực tế)`);
-    }
-
-    // Trả về kết quả
-    return {
-        predictions,
-        analysis: analysisInfo,
-        comparison: comparisonResult,
-        exportSuccess
-    };
 }
 
 // Định nghĩa hàm compareWithActualResults
@@ -1476,8 +1403,8 @@ module.exports = {
 
     // Thêm hàm phân tích đầy đủ
     analyzeFullData,
-    predictNumbers,
     predictWithCustomData,
+    predictNumbers: predictWithCustomData,
     exportPrediction,
     trimHistoryFile,
     compareWithActualResults

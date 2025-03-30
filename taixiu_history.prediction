@@ -1,0 +1,22 @@
+{
+  "predictions": [
+    5
+  ],
+  "stats": {
+    "tai": 4,
+    "xiu": 6,
+    "taiPercent": "40.00",
+    "xiuPercent": "60.00"
+  },
+  "timestamp": "2025-03-30T17:01:48.672Z",
+  "drawId": "202503301362",
+  "votes": {
+    "tài": 2,
+    "xỉu": 1
+  },
+  "strategies": [
+    "Phân tích tần suất: Chọn tài do tỷ lệ xuất hiện thấp hơn (Tài:4, Xỉu:6) (2 phiếu)",
+    "Phân tích thời gian: Theo thống kê, vào Chủ nhật có xu hướng ra Xỉu nhiều hơn (1 phiếu)"
+  ],
+  "indexPredicted": 0
+}

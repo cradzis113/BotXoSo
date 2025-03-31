@@ -1,4 +1,23 @@
+// Đầu file - đảm bảo import fs đúng cách
 const fs = require('fs').promises;
+
+// Đầu file - thêm cơ chế log toàn cục
+let ENABLE_LOGGING = false;
+
+// Thay thế tất cả console.log bằng các hàm này
+const gameLog = {
+  info: (message) => {
+    if (ENABLE_LOGGING) console.log(message);
+  },
+  error: (message) => console.error(message), // Vẫn giữ lại lỗi
+  debug: (message) => {
+    if (ENABLE_LOGGING) console.log(`[DEBUG] ${message}`);
+  },
+  result: (message) => {
+    // Luôn hiển thị kết quả dự đoán cuối cùng
+    console.log(`[KẾT QUẢ] ${message}`);
+  }
+};
 
 /**
  * Dự đoán số tiếp theo dựa trên lịch sử
@@ -6,10 +25,19 @@ const fs = require('fs').promises;
  * @param {Number} index - Vị trí cần dự đoán trong mảng numbers (0, 1, 2, ...)
  * @param {Number} limit - Giới hạn số lượng kết quả gần nhất để phân tích
  * @param {Array} fileConfig - [Tên file performance, true/false để lưu performance]
+ * @param {Boolean} log - Bật/tắt hiển thị log chi tiết
  * @returns {Promise<Object>} - Kết quả dự đoán và thống kê
  */
-async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["taixiu_performance", true]) {
+async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["taixiu_performance", true], log = false) {
+    // Đặt biến toàn cục để tất cả các hàm con đều có thể tham chiếu
+    ENABLE_LOGGING = log;
+    
     try {
+        // Hàm helper để log khi cần
+        const logInfo = (message) => {
+            if (log) console.log(message);
+        };
+        
         // Đảm bảo history là mảng và có dữ liệu
         if (!Array.isArray(history) || history.length === 0) {
             throw new Error("Lịch sử không hợp lệ");
@@ -18,7 +46,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         // Chuyển đổi index thành mảng indices để tương thích với code cũ
         const indices = [index];
         
-        console.log(`Dự đoán cho vị trí số ${index} trong mảng numbers`);
+        gameLog.info(`Dự đoán cho vị trí số ${index} trong mảng numbers`);
         
         // LẤY DỮ LIỆU TỪ ĐẦU MẢNG (phần tử 0 là mới nhất)
         const limitedHistory = history.slice(0, Math.min(limit, history.length));
@@ -30,26 +58,11 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         const performanceFile = fileConfig[0] + ".performance";
         const predictionFile = fileConfig[0] + ".prediction";
         
-        console.log(`---------- BẮT ĐẦU PHIÊN DỰ ĐOÁN MỚI ----------`);
-        console.log(`File hiệu suất: ${performanceFile}`);
-        console.log(`File dự đoán: ${predictionFile}`);
-        console.log(`ID chu kỳ hiện tại: ${currentDrawId}`);
-        console.log(`Phân tích ${limitedHistory.length} kết quả gần nhất.`);
-        
-        // Xử lý lỗi nếu vị trí index vượt quá kích thước mảng numbers
-        if (history[0]?.numbers && index >= history[0].numbers.length) {
-            console.error(`Lỗi: Index ${index} vượt quá kích thước mảng numbers (${history[0].numbers.length})`);
-            throw new Error(`Index ${index} không hợp lệ`);
-        }
-        
-        // In ra thông tin mẫu từ phần tử đầu tiên để kiểm tra
-        if (history[0]) {
-            console.log(`Mẫu dữ liệu đầu vào:`);
-            console.log(`- drawId: ${history[0].drawId}`);
-            console.log(`- numbers: [${history[0].numbers.join(', ')}]`);
-            console.log(`- drawTime: ${history[0].drawTime}`);
-            console.log(`- Số cần dự đoán (vị trí ${index}): ${history[0].numbers[index]}`);
-        }
+        gameLog.info(`---------- BẮT ĐẦU PHIÊN DỰ ĐOÁN MỚI ----------`);
+        gameLog.info(`File hiệu suất: ${performanceFile}`);
+        gameLog.info(`File dự đoán: ${predictionFile}`);
+        gameLog.info(`ID chu kỳ hiện tại: ${currentDrawId}`);
+        gameLog.info(`Phân tích ${limitedHistory.length} kết quả gần nhất.`);
         
         // === PHẦN 1: Ghi log hiệu suất cho dự đoán trước đó nếu có ===
         let lastPrediction = null;
@@ -57,22 +70,26 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         
         if (fileConfig && fileConfig[1]) {
             try {
-                // Đọc dự đoán trước (nếu có)
-                const predictionData = await fs.readFile(predictionFile, 'utf8');
-                lastPrediction = JSON.parse(predictionData);
-                console.log(`Đọc được dự đoán trước đó: ${JSON.stringify(lastPrediction.predictions)}`);
+                // Đọc dự đoán trước (nếu có) - sử dụng try/catch trực tiếp
+                try {
+                    const predictionData = await fs.readFile(predictionFile, 'utf8');
+                    lastPrediction = JSON.parse(predictionData);
+                    gameLog.info(`Đọc được dự đoán trước đó: ${JSON.stringify(lastPrediction.predictions)}`);
+                } catch (readError) {
+                    gameLog.info(`Không tìm thấy file dự đoán hoặc lỗi: ${readError.message}`);
+                }
                 
-                // Ghi log hiệu suất nếu có dự đoán trước
-                if (history.length > 0) {
+                // Ghi log hiệu suất nếu có dự đoán trước và có lịch sử
+                if (history.length > 0 && lastPrediction && lastPrediction.predictions) {
                     // Lấy kết quả từ phần tử mới nhất (index chỉ định)
                     const latestResult = history[0].numbers[index];
                     if (latestResult === undefined) {
-                        console.error(`Không tìm thấy kết quả tại vị trí ${index} trong mảng numbers`);
+                        gameLog.error(`Không tìm thấy kết quả tại vị trí ${index} trong mảng numbers`);
                     } else {
                         const previousPrediction = lastPrediction.predictions[0];
                         
                         // Định dạng thời gian VN HIỆN TẠI (không phụ thuộc vào chu kỳ)
-                        const vnCurrentTime = getVietnamTimeNow();
+                        const vnCurrentTime = getVietnamTimeNow(log);
                         
                         // Xác định Tài/Xỉu cho kết quả thực tế
                         const resultType = latestResult >= 5 ? "Tài" : "Xỉu";
@@ -86,7 +103,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                         
                         // ĐỊNH DẠNG LOG MỚI SỬ DỤNG DẤU GẠCH | VÀ THÊM VỊ TRÍ INDEX
                         const performanceLog = `Chu kỳ | ${currentDrawId} | ${vnCurrentTime} | Số thực tế: ${latestResult} (${resultType}) | Số dự đoán: ${previousPrediction} (${predictionType}) | Vị trí: ${index} | ${correctStr}\n`;
-                        console.log(`GHI LOG MỚI: ${performanceLog.trim()}`);
+                        gameLog.info(`GHI LOG MỚI: ${performanceLog.trim()}`);
                         
                         // TẠO FILE TRƯỚC KHI GHI NẾU KHÔNG TỒN TẠI
                         try {
@@ -94,14 +111,14 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                             await fs.access(performanceFile).catch(async () => {
                                 // Nếu không, tạo file trống
                                 await fs.writeFile(performanceFile, "");
-                                console.log(`Đã tạo file ${performanceFile} mới`);
+                                gameLog.info(`Đã tạo file ${performanceFile} mới`);
                             });
                             
                             // Sau đó GHI THÊM (APPEND) log vào file
                             await fs.appendFile(performanceFile, performanceLog);
-                            console.log(`Đã ghi log hiệu suất thành công`);
+                            gameLog.info(`Đã ghi log hiệu suất thành công`);
                         } catch (error) {
-                            console.error(`LỖI KHI GHI LOG: ${error.message}`);
+                            gameLog.error(`LỖI KHI GHI LOG: ${error.message}`);
                         }
                     }
                 }
@@ -110,12 +127,12 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                 try {
                     const perfFileContent = await fs.readFile(performanceFile, 'utf8');
                     performanceData = perfFileContent.split('\n').filter(line => line.trim().length > 0);
-                    console.log(`Đọc được ${performanceData.length} dòng dữ liệu hiệu suất`);
+                    gameLog.info(`Đọc được ${performanceData.length} dòng dữ liệu hiệu suất`);
                 } catch (error) {
-                    console.log(`Không đọc được file hiệu suất: ${error.message}`);
+                    gameLog.info(`Không đọc được file hiệu suất: ${error.message}`);
                 }
             } catch (error) {
-                console.log(`Không đọc được dự đoán trước đó: ${error.message}`);
+                gameLog.info(`Không đọc được dự đoán trước đó: ${error.message}`);
             }
         }
         
@@ -123,11 +140,11 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         
         // Phân tích dữ liệu cơ bản
         const stats = analyzeTaiXiu(limitedHistory, indices);
-        console.log(`Kết quả phân tích cơ bản: Tài ${stats.taiPercent}%, Xỉu ${stats.xiuPercent}%`);
+        gameLog.info(`Kết quả phân tích cơ bản: Tài ${stats.taiPercent}%, Xỉu ${stats.xiuPercent}%`);
         
         // Kiểm tra lượng dữ liệu hiệu suất
         const hasEnoughPerformanceData = performanceData && performanceData.length >= 10;
-        console.log(`Dữ liệu hiệu suất: ${performanceData ? performanceData.length : 0} dòng (${hasEnoughPerformanceData ? 'đủ' : 'chưa đủ'} cho phân tích nâng cao)`);
+        gameLog.info(`Dữ liệu hiệu suất: ${performanceData ? performanceData.length : 0} dòng (${hasEnoughPerformanceData ? 'đủ' : 'chưa đủ'} cho phân tích nâng cao)`);
         
         // Hệ thống chiến lược và bỏ phiếu
         const strategies = [];
@@ -212,7 +229,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             }
             
             // Thông báo về việc sử dụng chiến lược thay thế
-            console.log("Sử dụng chiến lược thay thế do chưa đủ dữ liệu hiệu suất");
+            gameLog.info("Sử dụng chiến lược thay thế do chưa đủ dữ liệu hiệu suất");
         } else {
             // Nếu có đủ dữ liệu hiệu suất, thực hiện các chiến lược phụ thuộc vào nó
             // === 4. CHIẾN LƯỢC ĐẢO NGƯỢC ===
@@ -233,17 +250,26 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         // === CHIẾN LƯỢC MỚI: TỰ HỌC TỪ HIỆU SUẤT ===
         if (hasEnoughPerformanceData) {
             // Thêm chiến lược tự học mới
-            const learningVote = learnFromPerformance(performanceData, limitedHistory, index);
+            const learningVote = learnFromPerformance(performanceData, limitedHistory, index, log);
             if (learningVote) {
                 votes[learningVote.type] += learningVote.weight;
                 strategies.push(`Tự học: ${learningVote.description} (${learningVote.weight} phiếu)`);
             }
             
             // Thêm chiến lược điều chỉnh thiên lệch
-            const biasVote = detectAndCorrectBias(performanceData);
+            const biasVote = detectAndCorrectBias(performanceData, log);
             if (biasVote) {
                 votes[biasVote.type] += biasVote.weight;
                 strategies.push(`Điều chỉnh: ${biasVote.description} (${biasVote.weight} phiếu)`);
+            }
+            
+            // THÊM ĐOẠN CODE MỚI VÀO ĐÂY:
+            // === CHIẾN LƯỢC MỚI: PHÂN TÍCH BỆT VÀ BẺ ===
+            const streakVote = analyzeStreakAndReversal(performanceData);
+            if (streakVote) {
+                // Áp dụng trọng số cao hơn cho chiến lược này
+                votes[streakVote.type] += streakVote.weight;
+                strategies.push(`${streakVote.description} (${streakVote.weight} phiếu)`);
             }
         }
         
@@ -259,7 +285,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         // Thêm đoạn code này trước khi quyết định dự đoán cuối cùng
 
         // Tổng hợp kết quả bỏ phiếu
-        console.log(`Kết quả bỏ phiếu ban đầu: Tài ${votes.tài} phiếu, Xỉu ${votes.xỉu} phiếu`);
+        gameLog.info(`Kết quả bỏ phiếu ban đầu: Tài ${votes.tài} phiếu, Xỉu ${votes.xỉu} phiếu`);
 
         // KIỂM TRA VÀ CÂN BẰNG DỰ ĐOÁN
         // Phân tích tỷ lệ Tài/Xỉu trong lịch sử hiệu suất gần đây
@@ -288,9 +314,9 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             }
         }
 
-        console.log(`Phân tích 15 kết quả gần đây:`);
-        console.log(`- Kết quả thực tế: Tài ${recentTaiCount}, Xỉu ${recentXiuCount}`);
-        console.log(`- Dự đoán: Tài ${recentTaiPredictions}, Xỉu ${recentXiuPredictions}`);
+        gameLog.info(`Phân tích 15 kết quả gần đây:`);
+        gameLog.info(`- Kết quả thực tế: Tài ${recentTaiCount}, Xỉu ${recentXiuCount}`);
+        gameLog.info(`- Dự đoán: Tài ${recentTaiPredictions}, Xỉu ${recentXiuPredictions}`);
 
         // Điều chỉnh trọng số nếu dự đoán quá thiên về một bên
         const predictionRatio = recentXiuPredictions / (recentTaiPredictions + recentXiuPredictions || 1);
@@ -299,13 +325,13 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             const balancingPoints = Math.ceil((predictionRatio - 0.5) * 10);
             votes.tài += balancingPoints;
             strategies.push(`Cân bằng dự đoán: +${balancingPoints} cho Tài do dự đoán Xỉu quá nhiều (${(predictionRatio * 100).toFixed(0)}%)`);
-            console.log(`Điều chỉnh cân bằng: +${balancingPoints} điểm cho Tài`);
+            gameLog.info(`Điều chỉnh cân bằng: +${balancingPoints} điểm cho Tài`);
         } else if (predictionRatio < 0.35) { // Nếu dự đoán Tài > 65%
             // Tăng điểm cho Xỉu để cân bằng
             const balancingPoints = Math.ceil((0.5 - predictionRatio) * 10);
             votes.xỉu += balancingPoints;
-            strategies.push(`Cân bằng dự đoán: +${balancingPoints} cho Xỉu do dự đoán Tài quá nhiều (${((1-predictionRatio) * 100).toFixed(0)}%)`);
-            console.log(`Điều chỉnh cân bằng: +${balancingPoints} điểm cho Xỉu`);
+            strategies.push(`Cân bằng dự đoán: +${balancingPoints} cho Xỉu do dự đoán Tài quá nhiều (${((1 - predictionRatio) * 100).toFixed(0)}%)`);
+            gameLog.info(`Điều chỉnh cân bằng: +${balancingPoints} điểm cho Xỉu`);
         }
 
         // ĐIỀU CHỈNH THÊM DỰA TRÊN KẾT QUẢ THỰC TẾ
@@ -314,17 +340,17 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             // Tăng điểm cho Tài vì xu hướng rõ ràng
             votes.tài += 2;
             strategies.push(`Xu hướng thực tế: +2 cho Tài do Tài xuất hiện nhiều (${(actualRatio * 100).toFixed(0)}%)`);
-            console.log(`Điều chỉnh theo xu hướng: +2 điểm cho Tài`);
+            gameLog.info(`Điều chỉnh theo xu hướng: +2 điểm cho Tài`);
         } else if (actualRatio < 0.4) { // Nếu thực tế Xỉu xuất hiện > 60%
             // Tăng điểm cho Xỉu vì xu hướng rõ ràng
             votes.xỉu += 2;
-            strategies.push(`Xu hướng thực tế: +2 cho Xỉu do Xỉu xuất hiện nhiều (${((1-actualRatio) * 100).toFixed(0)}%)`);
-            console.log(`Điều chỉnh theo xu hướng: +2 điểm cho Xỉu`);
+            strategies.push(`Xu hướng thực tế: +2 cho Xỉu do Xỉu xuất hiện nhiều (${((1 - actualRatio) * 100).toFixed(0)}%)`);
+            gameLog.info(`Điều chỉnh theo xu hướng: +2 điểm cho Xỉu`);
         }
 
         // Tổng hợp kết quả bỏ phiếu sau khi cân bằng
-        console.log(`Kết quả bỏ phiếu sau điều chỉnh: Tài ${votes.tài} phiếu, Xỉu ${votes.xỉu} phiếu`);
-        strategies.forEach(strategy => console.log(strategy));
+        gameLog.info(`Kết quả bỏ phiếu sau điều chỉnh: Tài ${votes.tài} phiếu, Xỉu ${votes.xỉu} phiếu`);
+        strategies.forEach(strategy => gameLog.info(strategy));
 
         // ===== GIẢI PHÁP KHẨN CẤP CHỐNG THIÊN VỊ =====
         // Thêm đoạn code này ngay trước khi quyết định dự đoán cuối cùng
@@ -346,32 +372,32 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
 
         const totalPredictions = taiPredictions + xiuPredictions;
         const taiPredictionRatio = totalPredictions > 0 ? taiPredictions / totalPredictions : 0.5;
-        console.log(`Phân tích ${totalPredictions} dự đoán: Tài ${taiPredictions} (${(taiPredictionRatio * 100).toFixed(0)}%), Xỉu ${xiuPredictions} (${((1-taiPredictionRatio) * 100).toFixed(0)}%)`);
+        gameLog.info(`Phân tích ${totalPredictions} dự đoán: Tài ${taiPredictions} (${(taiPredictionRatio * 100).toFixed(0)}%), Xỉu ${xiuPredictions} (${((1 - taiPredictionRatio) * 100).toFixed(0)}%)`);
 
         // 2. ÁP DỤNG BIỆN PHÁP KHẨN CẤP
         let emergencyBalancing = false;
 
         // Nếu tỷ lệ Tài < 45% hoặc Xỉu < 45%, áp dụng biện pháp khẩn cấp
-        if (taiPredictionRatio < 0.45) {
+        if (false && taiPredictionRatio < 0.45) {  // Thêm "false &&" để vô hiệu hóa
             // THIÊN VỊ XỈU QUÁ NHIỀU - BẮT BUỘC DỰ ĐOÁN TÀI
-            console.log(`CẢNH BÁO: Phát hiện thiên vị Xỉu nghiêm trọng (${((1-taiPredictionRatio)*100).toFixed(0)}%)!`);
-            console.log(`Áp dụng biện pháp khẩn cấp: BẮT BUỘC dự đoán TÀI`);
+            gameLog.info(`CẢNH BÁO: Phát hiện thiên vị Xỉu nghiêm trọng (${((1 - taiPredictionRatio) * 100).toFixed(0)}%)!`);
+            gameLog.info(`Áp dụng biện pháp khẩn cấp: BẮT BUỘC dự đoán TÀI`);
             
             // Ghi đè các phiếu bầu
             votes.tài = 999;
             votes.xỉu = 0;
             emergencyBalancing = true;
-            strategies.push(`KHẨN CẤP: Bắt buộc chọn TÀI do phát hiện thiên vị Xỉu (${((1-taiPredictionRatio)*100).toFixed(0)}%)`);
-        } else if ((1 - taiPredictionRatio) < 0.45) {
+            strategies.push(`KHẨN CẤP: Bắt buộc chọn TÀI do phát hiện thiên vị Xỉu (${((1 - taiPredictionRatio) * 100).toFixed(0)}%)`);
+        } else if (false && (1 - taiPredictionRatio) < 0.45) {  // Thêm "false &&" để vô hiệu hóa
             // THIÊN VỊ TÀI QUÁ NHIỀU - BẮT BUỘC DỰ ĐOÁN XỈU
-            console.log(`CẢNH BÁO: Phát hiện thiên vị Tài nghiêm trọng (${(taiPredictionRatio*100).toFixed(0)}%)!`);
-            console.log(`Áp dụng biện pháp khẩn cấp: BẮT BUỘC dự đoán XỈU`);
+            gameLog.info(`CẢNH BÁO: Phát hiện thiên vị Tài nghiêm trọng (${(taiPredictionRatio * 100).toFixed(0)}%)!`);
+            gameLog.info(`Áp dụng biện pháp khẩn cấp: BẮT BUỘC dự đoán XỈU`);
             
             // Ghi đè các phiếu bầu
             votes.tài = 0;
             votes.xỉu = 999;
             emergencyBalancing = true;
-            strategies.push(`KHẨN CẤP: Bắt buộc chọn XỈU do phát hiện thiên vị Tài (${(taiPredictionRatio*100).toFixed(0)}%)`);
+            strategies.push(`KHẨN CẤP: Bắt buộc chọn XỈU do phát hiện thiên vị Tài (${(taiPredictionRatio * 100).toFixed(0)}%)`);
         }
 
         // 3. ĐIỀU CHỈNH CHO 5 DỰ ĐOÁN GẦN NHẤT
@@ -393,13 +419,13 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             
             // Nếu 5 dự đoán gần nhất cùng một loại, bắt buộc đổi sang loại kia
             if (recentTai === 0 && recentXiu > 0) {
-                console.log(`CẢNH BÁO: ${recentXiu}/5 dự đoán gần nhất đều là XỈU!`);
-                console.log(`Áp dụng biện pháp chống lặp: Bắt buộc dự đoán TÀI`);
+                gameLog.info(`CẢNH BÁO: ${recentXiu}/5 dự đoán gần nhất đều là XỈU!`);
+                gameLog.info(`Áp dụng biện pháp chống lặp: Bắt buộc dự đoán TÀI`);
                 votes.tài = votes.tài + 10;
                 strategies.push(`Chống lặp: +10 cho Tài do ${recentXiu} dự đoán gần nhất đều là Xỉu`);
             } else if (recentXiu === 0 && recentTai > 0) {
-                console.log(`CẢNH BÁO: ${recentTai}/5 dự đoán gần nhất đều là TÀI!`);
-                console.log(`Áp dụng biện pháp chống lặp: Bắt buộc dự đoán XỈU`);
+                gameLog.info(`CẢNH BÁO: ${recentTai}/5 dự đoán gần nhất đều là TÀI!`);
+                gameLog.info(`Áp dụng biện pháp chống lặp: Bắt buộc dự đoán XỈU`);
                 votes.xỉu = votes.xỉu + 10;
                 strategies.push(`Chống lặp: +10 cho Xỉu do ${recentTai} dự đoán gần nhất đều là Tài`);
             }
@@ -414,7 +440,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                 votes.tài = votes.xỉu;
                 votes.xỉu = tmp;
                 strategies.push(`Yếu tố ngẫu nhiên: Đảo ngược phiếu bầu (30% cơ hội)`);
-                console.log(`Áp dụng yếu tố ngẫu nhiên: Đảo ngược phiếu bầu Tài<->Xỉu`);
+                gameLog.info(`Áp dụng yếu tố ngẫu nhiên: Đảo ngược phiếu bầu Tài<->Xỉu`);
             }
         }
 
@@ -446,8 +472,8 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             // Nếu 3 dự đoán gần nhất cùng loại, bắt buộc đổi loại
             if (allSameType && recentType) {
                 const oppositeType = recentType === "tài" ? "xỉu" : "tài";
-                console.log(`CẢNH BÁO: 3 dự đoán gần nhất đều là ${recentType.toUpperCase()}!`);
-                console.log(`Biện pháp chống lặp bổ sung: Tự động đổi sang ${oppositeType.toUpperCase()}`);
+                gameLog.info(`CẢNH BÁO: 3 dự đoán gần nhất đều là ${recentType.toUpperCase()}!`);
+                gameLog.info(`Biện pháp chống lặp bổ sung: Tự động đổi sang ${oppositeType.toUpperCase()}`);
                 
                 // Tăng mạnh điểm cho loại ngược lại
                 if (oppositeType === "tài") {
@@ -461,7 +487,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         }
 
         // Tổng hợp kết quả bỏ phiếu sau khi can thiệp
-        console.log(`Kết quả bỏ phiếu sau can thiệp: Tài ${votes.tài} phiếu, Xỉu ${votes.xỉu} phiếu`);
+        gameLog.info(`Kết quả bỏ phiếu sau can thiệp: Tài ${votes.tài} phiếu, Xỉu ${votes.xỉu} phiếu`);
 
         // Chọn loại dự đoán dựa vào kết quả phiếu bầu sau can thiệp
         let predictedType;
@@ -499,7 +525,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                 // Nếu đã dự đoán tất cả các số, chọn ngẫu nhiên
                 prediction = taiNumbers[Math.floor(Math.random() * taiNumbers.length)];
             }
-            console.log(`Dự đoán: TÀI - Số ${prediction}`);
+            gameLog.info(`Dự đoán: TÀI - Số ${prediction}`);
         } else {
             // Chọn số Xỉu (0-4) với sự đa dạng
             const xiuNumbers = [0, 1, 2, 3, 4];
@@ -523,7 +549,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                 // Nếu đã dự đoán tất cả các số, chọn ngẫu nhiên
                 prediction = xiuNumbers[Math.floor(Math.random() * xiuNumbers.length)];
             }
-            console.log(`Dự đoán: XỈU - Số ${prediction}`);
+            gameLog.info(`Dự đoán: XỈU - Số ${prediction}`);
         }
 
         // === PHẦN 4: LƯU DỰ ĐOÁN VÀO FILE ===
@@ -544,13 +570,13 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                 // Chuyển đổi thành chuỗi JSON và lưu
                 const predictionJSON = JSON.stringify(predictionObject, null, 2);
                 await fs.writeFile(predictionFile, predictionJSON);
-                console.log(`ĐÃ LƯU DỰ ĐOÁN: ${prediction} vào ${predictionFile}`);
+                gameLog.info(`ĐÃ LƯU DỰ ĐOÁN: ${prediction} vào ${predictionFile}`);
             } catch (error) {
-                console.error(`LỖI KHI LƯU DỰ ĐOÁN: ${error.message}`);
+                gameLog.error(`LỖI KHI LƯU DỰ ĐOÁN: ${error.message}`);
             }
         }
         
-        console.log(`---------- KẾT THÚC PHIÊN DỰ ĐOÁN ----------`);
+        gameLog.info(`---------- KẾT THÚC PHIÊN DỰ ĐOÁN ----------`);
         
         // Thêm yếu tố ngẫu nhiên bổ sung
         const randomFactor = Math.random();
@@ -558,7 +584,27 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             const randomChoice = Math.random() < 0.5 ? "tài" : "xỉu";
             votes[randomChoice] += 5;
             strategies.push(`Yếu tố ngẫu nhiên bổ sung: +5 cho ${randomChoice} (20% cơ hội)`);
-            console.log(`Thêm yếu tố ngẫu nhiên: +5 cho ${randomChoice}`);
+            gameLog.info(`Thêm yếu tố ngẫu nhiên: +5 cho ${randomChoice}`);
+        }
+        
+        // Thêm biện pháp chống lặp 3 dự đoán liên tiếp
+        const recentPredictions = [];
+        for (const line of performanceData.slice(-3)) {
+            const match = line.match(/Số dự đoán: (\d+) \((Tài|Xỉu)\)/);
+            if (match) {
+                recentPredictions.push(match[2]); // "Tài" hoặc "Xỉu"
+            }
+        }
+
+        if (recentPredictions.length === 3 && 
+            recentPredictions[0] === recentPredictions[1] && 
+            recentPredictions[1] === recentPredictions[2]) {
+            
+            const oppositeType = recentPredictions[0] === "Tài" ? "xỉu" : "tài";
+            gameLog.info(`CHỐNG LẶP: Phát hiện ${recentPredictions[0]} 3 lần liên tiếp, buộc chọn ${oppositeType}`);
+            
+            votes[oppositeType] += 20; // Tăng điểm mạnh nhưng không ghi đè hoàn toàn
+            strategies.push(`CHỐNG LẶP: +20 cho ${oppositeType} do phát hiện 3 dự đoán ${recentPredictions[0]} liên tiếp`);
         }
         
         // Trả về kết quả cuối cùng
@@ -572,7 +618,7 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             message: "Đã dự đoán thành công"
         };
     } catch (error) {
-        console.error(`LỖI NGHIÊM TRỌNG: ${error.message}, ${error.stack}`);
+        gameLog.error(`LỖI NGHIÊM TRỌNG: ${error.message}, ${error.stack}`);
         return {
             predictions: [0],
             stats: { tai: 0, xiu: 0, taiPercent: 0, xiuPercent: 0 },
@@ -583,13 +629,15 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
 
 // Hàm phân tích giá trị
 function analyzeTaiXiu(history, indices) {
-    if (!Array.isArray(history) || history.length === 0) {
-        return { tai: 0, xiu: 0, taiPercent: 0, xiuPercent: 0 };
-    }
-
-    let taiCount = 0;
-    let xiuCount = 0;
-
+    // Sửa lại để phân tích kết quả THỰC TẾ từ lịch sử
+    // Kiểm tra xem history có phải là mảng các object hay mảng chuỗi
+    const isHistoryObjects = history.length > 0 && typeof history[0] === 'object';
+    
+    // Khai báo mảng chứa kết quả thực tế đã xử lý
+    let processedResults = [];
+    
+    if (isHistoryObjects) {
+        // Nếu là mảng object (từ database)
     for (const item of history) {
         if (!item.numbers || !Array.isArray(item.numbers)) continue;
 
@@ -599,23 +647,53 @@ function analyzeTaiXiu(history, indices) {
             const num = Number(item.numbers[index]);
             if (isNaN(num)) continue;
 
-            if (num >= 0 && num <= 4) {
-                xiuCount++;
-            } else if (num >= 5 && num <= 9) {
-                taiCount++;
+                processedResults.push({
+                    number: num,
+                    type: num >= 5 ? "Tài" : "Xỉu"
+                });
+            }
+        }
+    } else {
+        // Nếu là mảng chuỗi (từ file performance)
+        for (const line of history) {
+            if (typeof line !== 'string') continue;
+            
+            const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+            if (match) {
+                processedResults.push({
+                    number: parseInt(match[1]),
+                    type: match[2]
+                });
             }
         }
     }
+    
+    // Nếu không tìm được kết quả nào, trả về kết quả mặc định
+    if (processedResults.length === 0) {
+        return { tai: 0, xiu: 0, taiPercent: 50, xiuPercent: 50 };
+    }
+    
+    // Đếm số lượng Tài và Xỉu từ kết quả đã xử lý
+    const taiCount = processedResults.filter(r => r.type === "Tài").length;
+    const xiuCount = processedResults.filter(r => r.type === "Xỉu").length;
 
     const total = taiCount + xiuCount;
-    const taiPercent = total ? ((taiCount / total) * 100).toFixed(2) : 0;
-    const xiuPercent = total ? ((xiuCount / total) * 100).toFixed(2) : 0;
-
-    return { tai: taiCount, xiu: xiuCount, taiPercent, xiuPercent };
+    const taiPercent = total > 0 ? ((taiCount / total) * 100).toFixed(2) : 50;
+    const xiuPercent = total > 0 ? ((xiuCount / total) * 100).toFixed(2) : 50;
+    
+    return { 
+        tai: taiCount, 
+        xiu: xiuCount, 
+        taiPercent, 
+        xiuPercent,
+        // Thêm thông tin dự đoán dựa trên xu hướng thực tế
+        prediction: taiCount > xiuCount ? "Tài" : "Xỉu",
+        confidence: Math.abs(taiCount - xiuCount) / (taiCount + xiuCount) * 0.5 + 0.5
+    };
 }
 
 // Hàm lấy thời gian hiện tại Việt Nam (UTC+7) - SỬA LẠI
-function getVietnamTimeNow() {
+function getVietnamTimeNow(log = false) {
     // Lấy thời gian hiện tại theo UTC
     const now = new Date();
     
@@ -655,8 +733,8 @@ function getVietnamTimeNow() {
     const timeStr = `${vnHours}:${utcMinutes.toString().padStart(2, '0')}:${utcSeconds.toString().padStart(2, '0')} ${ampm}`;
     
     // DEBUG - in ra thông tin để kiểm tra
-    console.log(`Giờ UTC: ${utcHours}:${utcMinutes}:${utcSeconds}`);
-    console.log(`Giờ VN: ${vnHours}:${utcMinutes}:${utcSeconds} ${ampm}`);
+    if (log) gameLog.debug(`Giờ UTC: ${utcHours}:${utcMinutes}:${utcSeconds}`);
+    if (log) gameLog.debug(`Giờ VN: ${vnHours}:${utcMinutes}:${utcSeconds} ${ampm}`);
     
     // Trả về chuỗi định dạng đầy đủ
     return `${dateStr} ${timeStr}`;
@@ -945,7 +1023,7 @@ function analyzeTimePatterns(drawId) {
             };
         }
     } catch (error) {
-        console.error(`Lỗi phân tích mẫu theo thời gian: ${error.message}`);
+        gameLog.error(`Lỗi phân tích mẫu theo thời gian: ${error.message}`);
     }
     
     return null;
@@ -1095,189 +1173,150 @@ function generateDiverseNumber(min, max, recentLogs) {
  * @param {Number} index - Vị trí cần dự đoán
  * @returns {Object} - Chiến lược và trọng số
  */
-function learnFromPerformance(performanceData, history, index) {
+function learnFromPerformance(performanceData, limitedHistory, index, log = false) {
     if (!performanceData || performanceData.length < 10) return null;
     
-    // Phân tích 15 kết quả gần nhất
-    const recentResults = performanceData.slice(-15);
+    // Lấy 30 kết quả gần nhất từ dữ liệu hiệu suất
+    const recentResults = performanceData.slice(-30);
     
-    // Lưu trữ chuỗi dự đoán và kết quả
-    const predictionPatterns = [];
-    const resultPatterns = [];
+    // Đếm kết quả THỰC TẾ gần đây
+    let taiCount = 0;
+    let xiuCount = 0;
     
-    // Điểm hiệu suất theo loại dự đoán
-    let taiCorrect = 0, taiWrong = 0;
-    let xiuCorrect = 0, xiuWrong = 0;
-    
-    // Ghi lại chuỗi dự đoán và kết quả
+    // Phân tích chính xác kết quả thực tế từ dữ liệu
     for (const line of recentResults) {
-        if (line.includes("Số thực tế:") && line.includes("Số dự đoán:")) {
-            // Phân tích dự đoán
-            const predMatch = line.match(/Số dự đoán: (\d+) \((Tài|Xỉu)\)/);
-            // Phân tích kết quả thực tế
-            const resultMatch = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
-            
-            if (predMatch && resultMatch) {
-                const predType = predMatch[2];
-                const resultType = resultMatch[2];
-                
-                // Thêm vào mẫu (T: Tài, X: Xỉu)
-                predictionPatterns.push(predType === "Tài" ? "T" : "X");
-                resultPatterns.push(resultType === "Tài" ? "T" : "X");
-                
-                // Tính điểm hiệu suất
-                if (predType === "Tài") {
-                    if (predType === resultType) taiCorrect++;
-                    else taiWrong++;
-                } else {
-                    if (predType === resultType) xiuCorrect++;
-                    else xiuWrong++;
-                }
+        if (typeof line !== 'string') continue;
+        
+        const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+        if (match) {
+            const type = match[2];
+            if (type === "Tài") {
+                taiCount++;
+            } else if (type === "Xỉu") {
+                xiuCount++;
             }
         }
     }
     
-    // Phân tích hiệu suất mỗi loại dự đoán
-    const taiAccuracy = taiCorrect + taiWrong > 0 ? taiCorrect / (taiCorrect + taiWrong) : 0;
-    const xiuAccuracy = xiuCorrect + xiuWrong > 0 ? xiuCorrect / (xiuCorrect + xiuWrong) : 0;
+    if (log) gameLog.info(`LỌC TỪ DỮ LIỆU HIỆU SUẤT: Tài ${taiCount}, Xỉu ${xiuCount}`);
     
-    // Chiến lược 1: Học từ độ chính xác của mỗi loại dự đoán
-    if (Math.abs(taiAccuracy - xiuAccuracy) > 0.3 && (taiCorrect + taiWrong >= 5) && (xiuCorrect + xiuWrong >= 5)) {
-        // Nếu một loại có độ chính xác cao hơn đáng kể, ưu tiên loại đó
-        const betterType = taiAccuracy > xiuAccuracy ? "tài" : "xỉu";
-        const accuracy = betterType === "tài" ? taiAccuracy : xiuAccuracy;
+    // Tính tỷ lệ thực tế
+    const total = taiCount + xiuCount;
+    if (total === 0) return null;
+    
+    const taiRatio = taiCount / total;
+    const xiuRatio = xiuCount / total;
+    
+    // Phân tích 10 kết quả gần nhất để phát hiện xu hướng ngắn hạn
+    const latest10 = recentResults.slice(-10);
+    let latestTai = 0;
+    let latestXiu = 0;
+    
+    for (const line of latest10) {
+        if (typeof line !== 'string') continue;
         
-        return {
-            type: betterType,
-            weight: Math.ceil(accuracy * 10), // Trọng số dựa trên độ chính xác
-            description: `Học từ hiệu suất: ${betterType} có độ chính xác cao hơn (${(accuracy * 100).toFixed(0)}%)`
+        const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+        if (match) {
+            const type = match[2];
+            if (type === "Tài") {
+                latestTai++;
+            } else if (type === "Xỉu") {
+                latestXiu++;
+            }
+        }
+    }
+    
+    if (log) gameLog.info(`10 KẾT QUẢ GẦN NHẤT: Tài ${latestTai}, Xỉu ${latestXiu}`);
+    
+    // Nếu có xu hướng rõ ràng trong 10 kết quả gần nhất
+    if (latestTai >= 7) {
+                return {
+            type: "tài",
+            weight: 8,
+            description: `TỰ HỌC: Theo xu hướng Tài mạnh (${latestTai}/10 kết quả gần nhất)`
+        };
+    } else if (latestXiu >= 7) {
+                return {
+            type: "xỉu",
+            weight: 8,
+            description: `TỰ HỌC: Theo xu hướng Xỉu mạnh (${latestXiu}/10 kết quả gần nhất)`
         };
     }
     
-    // Chiến lược 2: Học từ mẫu kết quả và dự đoán
-    if (predictionPatterns.length >= 5 && resultPatterns.length >= 5) {
-        // Tìm mẫu lặp lại trong dự đoán
-        const lastPredictions = predictionPatterns.slice(-3).join('');
-        const lastResults = resultPatterns.slice(-3).join('');
-        
-        // Đếm số lần xuất hiện của mẫu dự đoán này trong lịch sử
-        let patternCount = 0;
-        let taiAfterPattern = 0;
-        let xiuAfterPattern = 0;
-        
-        for (let i = 0; i < predictionPatterns.length - 3; i++) {
-            const pattern = predictionPatterns.slice(i, i + 3).join('');
-            if (pattern === lastPredictions && i + 3 < resultPatterns.length) {
-                patternCount++;
-                if (resultPatterns[i + 3] === 'T') taiAfterPattern++;
-                else xiuAfterPattern++;
-            }
-        }
-        
-        // Nếu có mẫu xuất hiện nhiều lần và có xu hướng rõ rệt
-        if (patternCount >= 2) {
-            const taiRatio = taiAfterPattern / patternCount;
-            const xiuRatio = xiuAfterPattern / patternCount;
-            
-            if (Math.abs(taiRatio - xiuRatio) > 0.5) {
-                const predictedType = taiRatio > xiuRatio ? "tài" : "xỉu";
-                const ratio = predictedType === "tài" ? taiRatio : xiuRatio;
-                
-                return {
-                    type: predictedType,
-                    weight: Math.min(5, patternCount),
-                    description: `Học từ mẫu dự đoán: Sau "${lastPredictions}" → ${predictedType} (${(ratio * 100).toFixed(0)}%, ${patternCount} lần)`
-                };
-            }
-        }
-        
-        // Phân tích xu hướng ngược (khi dự đoán sai nhiều liên tiếp)
-        let recentWrongs = 0;
-        for (let i = predictionPatterns.length - 1; i >= Math.max(0, predictionPatterns.length - 5); i--) {
-            if (predictionPatterns[i] !== resultPatterns[i]) {
-                recentWrongs++;
-            }
-        }
-        
-        if (recentWrongs >= 3) {
-            // Tính xu hướng thực tế gần đây
-            const recentResults = resultPatterns.slice(-5);
-            const recentTai = recentResults.filter(r => r === 'T').length;
-            const recentXiu = recentResults.filter(r => r === 'X').length;
-            
-            if (Math.abs(recentTai - recentXiu) > 2) {
-                // Xu hướng rõ rệt, nên theo
-                const dominantType = recentTai > recentXiu ? "tài" : "xỉu";
-                
-                return {
-                    type: dominantType,
-                    weight: 6, // Trọng số cao do dự đoán sai nhiều
-                    description: `Hiệu chỉnh sau nhiều dự đoán sai: Theo xu hướng thực tế (${dominantType})`
-                };
-            }
-        }
-    }
-    
-    // Chiến lược 3: Phân tích mẫu kết quả thực tế
-    if (resultPatterns.length >= 10) {
-        // Phân tích mẫu kết quả thực tế
-        let taiCount = 0;
-        let xiuCount = 0;
-        
-        // Đếm kết quả 5 chu kỳ gần nhất
-        for (let i = resultPatterns.length - 1; i >= Math.max(0, resultPatterns.length - 5); i--) {
-            if (resultPatterns[i] === 'T') taiCount++;
-            else xiuCount++;
-        }
-        
-        // Nếu chuỗi kết quả quá nghiêng về một bên, dự đoán sẽ đổi chiều
-        if (taiCount >= 4) {
+    // Xử lý xu hướng cân bằng hơn
+    if (taiRatio > 0.6) {
+        return {
+            type: "tài", 
+            weight: Math.round(taiRatio * 10),
+            description: `TỰ HỌC: Theo xu hướng Tài (${(taiRatio*100).toFixed(0)}% trong ${total} kết quả gần đây)`
+        };
+    } else if (xiuRatio > 0.6) {
             return {
                 type: "xỉu",
-                weight: 4,
-                description: `Học từ chu kỳ: Sau ${taiCount}/5 kết quả Tài liên tiếp, có xu hướng đổi sang Xỉu`
+            weight: Math.round(xiuRatio * 10),
+            description: `TỰ HỌC: Theo xu hướng Xỉu (${(xiuRatio*100).toFixed(0)}% trong ${total} kết quả gần đây)`
             };
-        } else if (xiuCount >= 4) {
-            return {
-                type: "tài",
-                weight: 4,
-                description: `Học từ chu kỳ: Sau ${xiuCount}/5 kết quả Xỉu liên tiếp, có xu hướng đổi sang Tài`
-            };
-        }
-    }
+    } 
     
-    // Sử dụng dữ liệu từ cả hai nguồn
-    if (history && history.length > 0 && resultPatterns.length > 0) {
-        // Tìm xu hướng từ cả hai nguồn
-        let recentHistoryTai = 0;
-        let recentHistoryXiu = 0;
+    // Nếu không có xu hướng rõ ràng, đề xuất mẫu cân bằng
+            return {
+        type: taiRatio >= xiuRatio ? "tài" : "xỉu",
+        weight: 2,
+        description: `TỰ HỌC: Không có xu hướng rõ rệt (Tài: ${taiCount}, Xỉu: ${xiuCount})`
+    };
+}
+
+function detectAndCorrectBias(performanceData, log = false) {
+    if (!performanceData || performanceData.length < 15) return null;
+    
+    // Phân tích 20 DỰ ĐOÁN gần nhất thay vì toàn bộ lịch sử
+    const recent20 = performanceData.slice(-20);
+    
+    // Đếm dự đoán Tài/Xỉu
+    const taiPredictions = recent20.filter(p => 
+        typeof p === 'string' && p.includes("Số dự đoán:") && p.includes("(Tài)")).length;
+    const xiuPredictions = recent20.filter(p => 
+        typeof p === 'string' && p.includes("Số dự đoán:") && p.includes("(Xỉu)")).length;
+    
+    // Đếm kết quả thực tế Tài/Xỉu
+    const taiActuals = recent20.filter(p => 
+        typeof p === 'string' && p.includes("Số thực tế:") && p.includes("(Tài)")).length;
+    const xiuActuals = recent20.filter(p => 
+        typeof p === 'string' && p.includes("Số thực tế:") && p.includes("(Xỉu)")).length;
+    
+    const totalPredictions = taiPredictions + xiuPredictions;
+    const totalActuals = taiActuals + xiuActuals;
+    
+    // In thông tin để kiểm tra
+    if (log) gameLog.info(`====== PHÂN TÍCH THIÊN VỊ (20 KẾT QUẢ GẦN ĐÂY) ======`);
+    if (log) gameLog.info(`Dự đoán: Tài ${taiPredictions}, Xỉu ${xiuPredictions}`);
+    if (log) gameLog.info(`Thực tế: Tài ${taiActuals}, Xỉu ${xiuActuals}`);
+    
+    // ĐIỀU CHỈNH: Chỉ khi tỷ lệ dự đoán khác xa với tỷ lệ thực tế (>30%)
+    if (totalPredictions >= 10 && totalActuals >= 10) {
+        const taiPredictionRatio = taiPredictions / totalPredictions;
+        const taiActualRatio = taiActuals / totalActuals;
         
-        // Lấy 7 kết quả gần nhất từ history
-        for (let i = 0; i < Math.min(7, history.length); i++) {
-            if (history[i]?.numbers && index < history[i].numbers.length) {
-                const num = Number(history[i].numbers[index]);
-                if (!isNaN(num)) {
-                    if (num >= 5) recentHistoryTai++;
-                    else recentHistoryXiu++;
-                }
+        // Mức độ chênh lệch
+        const biasLevel = Math.abs(taiPredictionRatio - taiActualRatio);
+        
+        // Chỉ điều chỉnh khi độ chênh lệch > 30%
+        if (biasLevel > 0.3) {
+            if (taiPredictionRatio < taiActualRatio) {
+                // Dự đoán Tài quá ít so với thực tế - tăng Tài
+                return {
+                    type: "tài",
+                    weight: Math.ceil(biasLevel * 15),
+                    description: `CÂN BẰNG: Tăng cường Tài do dự đoán (${(taiPredictionRatio*100).toFixed(0)}%) thấp hơn thực tế (${(taiActualRatio*100).toFixed(0)}%)`
+                };
+            } else {
+                // Dự đoán Tài quá nhiều so với thực tế - tăng Xỉu
+                return {
+                    type: "xỉu",
+                    weight: Math.ceil(biasLevel * 15),
+                    description: `CÂN BẰNG: Tăng cường Xỉu do dự đoán Tài (${(taiPredictionRatio*100).toFixed(0)}%) cao hơn thực tế (${(taiActualRatio*100).toFixed(0)}%)`
+                };
             }
-        }
-        
-        // Phối hợp với phân tích dự đoán gần đây
-        if (recentHistoryTai >= 5 && xiuWrong > xiuCorrect) {
-            // Hiện tại thực tế đang ra nhiều Tài và dự đoán Xỉu thường sai
-            return {
-                type: "tài",
-                weight: 5,
-                description: `Học từ hai nguồn: Thực tế đang ra nhiều Tài (${recentHistoryTai}/7) và dự đoán Xỉu thường sai`
-            };
-        } else if (recentHistoryXiu >= 5 && taiWrong > taiCorrect) {
-            // Hiện tại thực tế đang ra nhiều Xỉu và dự đoán Tài thường sai
-            return {
-                type: "xỉu",
-                weight: 5,
-                description: `Học từ hai nguồn: Thực tế đang ra nhiều Xỉu (${recentHistoryXiu}/7) và dự đoán Tài thường sai`
-            };
         }
     }
     
@@ -1285,107 +1324,127 @@ function learnFromPerformance(performanceData, history, index) {
 }
 
 /**
- * Phát hiện và khắc phục thiên lệch trong dự đoán
- * @param {Array} performanceData - Dữ liệu lịch sử hiệu suất
- * @returns {Object} - Chiến lược điều chỉnh thiên lệch
+ * Phân tích mẫu bệt và bẻ trong lịch sử kết quả
+ * @param {Array} performanceData - Dữ liệu lịch sử từ file performance
+ * @returns {Object} - Chiến lược và trọng số
  */
-function detectAndCorrectBias(performanceData) {
+function analyzeStreakAndReversal(performanceData) {
     if (!performanceData || performanceData.length < 10) return null;
     
-    // Đếm số lượng dự đoán Tài/Xỉu trong toàn bộ lịch sử
-    let taiPredictions = 0;
-    let xiuPredictions = 0;
-    let taiResults = 0;
-    let xiuResults = 0;
+    // Lấy 20 kết quả gần nhất để phân tích
+    const recentResults = performanceData.slice(-20);
     
-    for (const line of performanceData) {
-        if (line.includes("Số dự đoán:")) {
-            if (line.includes("(Tài)")) {
-                taiPredictions++;
-            } else if (line.includes("(Xỉu)")) {
-                xiuPredictions++;
-            }
-        }
+    // Trích xuất chuỗi kết quả thực tế gần đây (Tài/Xỉu)
+    const resultSequence = [];
+    
+    for (const line of recentResults) {
+        if (typeof line !== 'string') continue;
         
-        if (line.includes("Số thực tế:")) {
-            if (line.includes("(Tài)")) {
-                taiResults++;
-            } else if (line.includes("(Xỉu)")) {
-                xiuResults++;
-            }
+        const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+        if (match) {
+            resultSequence.push(match[2]); // "Tài" hoặc "Xỉu"
         }
     }
     
-    const totalPredictions = taiPredictions + xiuPredictions;
-    const totalResults = taiResults + xiuResults;
+    if (resultSequence.length < 5) return null;
     
-    if (totalPredictions < 10 || totalResults < 10) return null;
+    gameLog.info(`PHÂN TÍCH CHUỖI: ${resultSequence.join(' → ')}`);
     
-    // Tính tỷ lệ
-    const taiPredictionRatio = taiPredictions / totalPredictions;
-    const taiResultRatio = taiResults / totalResults;
+    // 1. PHÁT HIỆN BỆT (STREAK)
+    let currentStreak = 1;
+    let maxStreak = 1;
+    let currentType = resultSequence[0];
     
-    // Phát hiện thiên lệch
-    const biasDifference = Math.abs(taiPredictionRatio - taiResultRatio);
-    
-    if (biasDifference > 0.25) { // Thiên lệch lớn (> 25%)
-        // Nếu dự đoán Tài nhiều hơn thực tế
-        if (taiPredictionRatio > taiResultRatio + 0.25) {
-            return {
-                type: "xỉu",
-                weight: Math.min(10, Math.ceil(biasDifference * 20)),
-                description: `Điều chỉnh thiên lệch: Đang dự đoán Tài quá nhiều (${(taiPredictionRatio*100).toFixed(0)}% vs ${(taiResultRatio*100).toFixed(0)}%)`
-            };
+    // Tính độ dài chuỗi hiện tại
+    for (let i = 1; i < resultSequence.length; i++) {
+        if (resultSequence[i] === resultSequence[i-1]) {
+            currentStreak++;
+            if (i === resultSequence.length - 1) {
+                // Đây là phần tử cuối cùng, cập nhật maxStreak nếu cần
+                maxStreak = Math.max(maxStreak, currentStreak);
+                currentType = resultSequence[i];
+            }
+        } else {
+            // Kết thúc một chuỗi, cập nhật maxStreak
+            if (currentStreak > maxStreak) {
+                maxStreak = currentStreak;
+                currentType = resultSequence[i-1];
+            }
+            currentStreak = 1;
         }
-        // Nếu dự đoán Xỉu nhiều hơn thực tế
-        else if (taiPredictionRatio + 0.25 < taiResultRatio) {
+    }
+    
+    // 2. PHÂN TÍCH MẪU BẺ (REVERSAL PATTERN)
+    // Phân tích 10 kết quả gần nhất để phát hiện điểm bẻ
+    const last10 = resultSequence.slice(-10);
+    
+    // Đếm số lượng lần đổi chiều trong 10 kết quả gần nhất
+    let reversalCount = 0;
+    for (let i = 1; i < last10.length; i++) {
+        if (last10[i] !== last10[i-1]) {
+            reversalCount++;
+        }
+    }
+    
+    // Tính tỷ lệ đổi chiều
+    const reversalRate = reversalCount / (last10.length - 1);
+    
+    gameLog.info(`Chuỗi hiện tại: ${currentStreak} lần ${currentType} liên tiếp`);
+    gameLog.info(`Chuỗi dài nhất: ${maxStreak} lần ${currentType}`);
+    gameLog.info(`Tỷ lệ đổi chiều: ${(reversalRate * 100).toFixed(0)}%`);
+    
+    // 3. QUYẾT ĐỊNH CHIẾN LƯỢC
+    
+    // Nếu đang có chuỗi dài (từ 3 trở lên)
+    if (currentStreak >= 3) {
+        // Kiểm tra tỷ lệ đổi chiều để quyết định có nên bẻ hay không
+        if (reversalRate < 0.3) {
+            // Tỷ lệ đổi chiều thấp, xu hướng mạnh, nên THEO BỆT
             return {
-                type: "tài",
-                weight: Math.min(10, Math.ceil(biasDifference * 20)),
-                description: `Điều chỉnh thiên lệch: Đang dự đoán Xỉu quá nhiều (${((1-taiPredictionRatio)*100).toFixed(0)}% vs ${((1-taiResultRatio)*100).toFixed(0)}%)`
+                type: currentType.toLowerCase(),
+                weight: currentStreak + 2,
+                description: `THEO BỆT: ${currentType} đã xuất hiện ${currentStreak} lần liên tiếp, xu hướng mạnh`
+            };
+        } else {
+            // Tỷ lệ đổi chiều cao, có thể sắp bẻ, nên BẺ
+            const oppositeType = currentType === "Tài" ? "xỉu" : "tài";
+            return {
+                type: oppositeType,
+                weight: currentStreak + 1,
+                description: `BẺ XU HƯỚNG: ${currentType} đã xuất hiện ${currentStreak} lần liên tiếp, có thể sắp đổi chiều`
             };
         }
     }
     
-    // Nếu lịch sử kết quả đang có xu hướng rõ rệt
-    if (taiResultRatio > 0.65) {
-        // Xu hướng đang là Tài, nhưng kiểm tra 5 kết quả gần nhất
-        const recent5 = performanceData.slice(-5);
-        let recentTaiResults = 0;
+    // Nếu tỷ lệ đổi chiều cao (>50%), thường là đổi chiều liên tục
+    if (reversalRate > 0.5) {
+        // Nếu kết quả gần nhất là Tài, thì kết quả tiếp theo có thể là Xỉu và ngược lại
+        const lastResult = resultSequence[resultSequence.length - 1];
+        const oppositeType = lastResult === "Tài" ? "xỉu" : "tài";
         
-        for (const line of recent5) {
-            if (line.includes("Số thực tế:") && line.includes("(Tài)")) {
-                recentTaiResults++;
-            }
-        }
-        
-        // Nếu xu hướng gần đây vẫn mạnh
-        if (recentTaiResults >= 3) {
             return {
-                type: "tài",
-                weight: 4,
-                description: `Điều chỉnh theo xu hướng: Kết quả Tài đang chiếm ưu thế (${(taiResultRatio*100).toFixed(0)}%)`
-            };
-        }
-    } else if (taiResultRatio < 0.35) {
-        // Xu hướng đang là Xỉu, nhưng kiểm tra 5 kết quả gần nhất
-        const recent5 = performanceData.slice(-5);
-        let recentXiuResults = 0;
-        
-        for (const line of recent5) {
-            if (line.includes("Số thực tế:") && line.includes("(Xỉu)")) {
-                recentXiuResults++;
-            }
-        }
-        
-        // Nếu xu hướng gần đây vẫn mạnh
-        if (recentXiuResults >= 3) {
+            type: oppositeType,
+            weight: Math.round(reversalRate * 10),
+            description: `ĐỔI CHIỀU LIÊN TỤC: Sau ${lastResult} thường là ${oppositeType === "tài" ? "Tài" : "Xỉu"} (tỷ lệ đổi chiều ${(reversalRate * 100).toFixed(0)}%)`
+        };
+    }
+    
+    // Nếu không có mẫu rõ ràng, thì xem xét xu hướng chung
+    const taiCount = resultSequence.filter(r => r === "Tài").length;
+    const xiuCount = resultSequence.length - taiCount;
+    
+    if (taiCount > xiuCount * 1.5) {
+        return {
+            type: "tài",
+            weight: 3,
+            description: `XU HƯỚNG TÀI: Tài chiếm ưu thế (${taiCount}/${resultSequence.length})`
+        };
+    } else if (xiuCount > taiCount * 1.5) {
             return {
                 type: "xỉu",
-                weight: 4,
-                description: `Điều chỉnh theo xu hướng: Kết quả Xỉu đang chiếm ưu thế (${((1-taiResultRatio)*100).toFixed(0)}%)`
+            weight: 3,
+            description: `XU HƯỚNG XỈU: Xỉu chiếm ưu thế (${xiuCount}/${resultSequence.length})`
             };
-        }
     }
     
     return null;

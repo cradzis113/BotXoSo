@@ -150,6 +150,17 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
         const strategies = [];
         const votes = { tài: 0, xỉu: 0 };
         
+        // THÊM PHÂN TÍCH LỊCH SỬ - ĐẶT NGAY SAU KHI ĐỌC PERFORMANCEDATA
+        if (performanceData && performanceData.length >= 10) {
+            const historyAnalysis = analyzeHistory(performanceData);
+            if (historyAnalysis && historyAnalysis.type) {
+                // Tăng trọng số lên gấp đôi để ưu tiên kết quả phân tích lịch sử
+                votes[historyAnalysis.type] += historyAnalysis.weight * 2;
+                strategies.push(historyAnalysis.description);
+                gameLog.info(`Áp dụng phân tích lịch sử: ${historyAnalysis.description} (${historyAnalysis.weight * 2} phiếu)`);
+            }
+        }
+        
         // === 1. CHIẾN LƯỢC PHÂN TÍCH TẦN SUẤT ===
         // Luôn thực hiện vì chỉ cần history
         const frequencyVote = analyzeFrequency(limitedHistory, indices);
@@ -267,9 +278,20 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
             // === CHIẾN LƯỢC MỚI: PHÂN TÍCH BỆT VÀ BẺ ===
             const streakVote = analyzeStreakAndReversal(performanceData);
             if (streakVote) {
-                // Áp dụng trọng số cao hơn cho chiến lược này
-                votes[streakVote.type] += streakVote.weight;
-                strategies.push(`${streakVote.description} (${streakVote.weight} phiếu)`);
+                // Tăng ưu tiên cho chiến lược theo bệt
+                votes[streakVote.type] += streakVote.weight * 2; // Nhân đôi trọng số
+                strategies.push(`${streakVote.description} (${streakVote.weight * 2} phiếu)`);
+                
+                // Ghi đè các chiến lược khác nếu phát hiện bệt mạnh
+                if (streakVote.weight >= 15) {
+                    // Reset các vote khác
+                    votes.tài = 0;
+                    votes.xỉu = 0;
+                    // Chỉ giữ lại vote theo bệt
+                    votes[streakVote.type] = streakVote.weight * 3;
+                    strategies.length = 0; // Xóa các chiến lược cũ
+                    strategies.push(`THEO BỆT ƯU TIÊN CAO: ${streakVote.description} (${streakVote.weight * 3} phiếu)`);
+                }
             }
         }
         
@@ -417,29 +439,29 @@ async function predictNumbers(history, index = 0, limit = 25, fileConfig = ["tai
                 }
             }
             
-            // Nếu 5 dự đoán gần nhất cùng một loại, bắt buộc đổi sang loại kia
-            if (recentTai === 0 && recentXiu > 0) {
-                gameLog.info(`CẢNH BÁO: ${recentXiu}/5 dự đoán gần nhất đều là XỈU!`);
-                gameLog.info(`Áp dụng biện pháp chống lặp: Bắt buộc dự đoán TÀI`);
-                votes.tài = votes.tài + 10;
-                strategies.push(`Chống lặp: +10 cho Tài do ${recentXiu} dự đoán gần nhất đều là Xỉu`);
-            } else if (recentXiu === 0 && recentTai > 0) {
+            // Nếu 5 dự đoán gần nhất thiên lệch nhiều về một bên
+            if (recentTai >= 4 && recentXiu === 0) {
                 gameLog.info(`CẢNH BÁO: ${recentTai}/5 dự đoán gần nhất đều là TÀI!`);
-                gameLog.info(`Áp dụng biện pháp chống lặp: Bắt buộc dự đoán XỈU`);
-                votes.xỉu = votes.xỉu + 10;
-                strategies.push(`Chống lặp: +10 cho Xỉu do ${recentTai} dự đoán gần nhất đều là Tài`);
+                gameLog.info(`Áp dụng biện pháp chống lặp: Tăng trọng số cho XỈU`);
+                votes.xỉu = votes.xỉu + 15; // Tăng từ 10 lên 15
+                strategies.push(`Chống lặp: +15 cho Xỉu do ${recentTai}/5 dự đoán gần nhất đều là Tài`);
+            } else if (recentXiu >= 4 && recentTai === 0) {
+                gameLog.info(`CẢNH BÁO: ${recentXiu}/5 dự đoán gần nhất đều là XỈU!`);
+                gameLog.info(`Áp dụng biện pháp chống lặp: Tăng trọng số cho TÀI`);
+                votes.tài = votes.tài + 15; // Tăng từ 10 lên 15
+                strategies.push(`Chống lặp: +15 cho Tài do ${recentXiu}/5 dự đoán gần nhất đều là Xỉu`);
             }
         }
 
         // 4. THÊM YẾU TỐ NGẪU NHIÊN NẾU CẦN
         if (!emergencyBalancing) {
             // Thêm yếu tố ngẫu nhiên để tránh bị mắc kẹt vào mẫu
-            // 30% cơ hội đảo ngược phiếu bầu khi không trong trường hợp khẩn cấp
-            if (Math.random() < 0.3) {
+            // 20% cơ hội đảo ngược phiếu bầu khi không trong trường hợp khẩn cấp
+            if (Math.random() < 0.2) { // Giảm từ 0.3 xuống 0.2
                 const tmp = votes.tài;
                 votes.tài = votes.xỉu;
                 votes.xỉu = tmp;
-                strategies.push(`Yếu tố ngẫu nhiên: Đảo ngược phiếu bầu (30% cơ hội)`);
+                strategies.push(`Yếu tố ngẫu nhiên: Đảo ngược phiếu bầu (20% cơ hội)`);
                 gameLog.info(`Áp dụng yếu tố ngẫu nhiên: Đảo ngược phiếu bầu Tài<->Xỉu`);
             }
         }
@@ -1079,49 +1101,6 @@ function analyzePerformance(performanceData) {
     return null;
 }
 
-// Hàm hỗ trợ sinh số thông minh
-function generateSmartNumber(min, max, history, indices) {
-    // Mặc định, sinh số ngẫu nhiên trong khoảng
-    let result = Math.floor(Math.random() * (max - min + 1)) + min;
-    
-    // Nếu có lịch sử, tìm số xuất hiện ít nhất trong khoảng này
-    if (history && history.length > 0) {
-        const counts = Array(10).fill(0);
-        
-        // Đếm số lần xuất hiện của mỗi số
-        for (const item of history) {
-            if (!item.numbers || !Array.isArray(item.numbers)) continue;
-            
-            for (const index of indices) {
-                if (index >= item.numbers.length) continue;
-                
-                const num = Number(item.numbers[index]);
-                if (isNaN(num) || num < 0 || num > 9) continue;
-                
-                counts[num]++;
-            }
-        }
-        
-        // Tìm số xuất hiện ít nhất trong khoảng [min, max]
-        let minCount = Infinity;
-        let leastFrequentNum = -1;
-        
-        for (let i = min; i <= max; i++) {
-            if (counts[i] < minCount) {
-                minCount = counts[i];
-                leastFrequentNum = i;
-            }
-        }
-        
-        // 70% cơ hội chọn số xuất hiện ít nhất, 30% chọn ngẫu nhiên
-        if (leastFrequentNum !== -1 && Math.random() < 0.7) {
-            result = leastFrequentNum;
-        }
-    }
-    
-    return result;
-}
-
 // Hàm lấy tên thứ trong tuần
 function getWeekdayName(weekday) {
     const weekdays = [
@@ -1129,41 +1108,6 @@ function getWeekdayName(weekday) {
         "Thứ năm", "Thứ sáu", "Thứ bảy"
     ];
     return weekdays[weekday] || "";
-}
-
-// Thêm hàm tạo số đa dạng
-function generateDiverseNumber(min, max, recentLogs) {
-    // Đếm số lần xuất hiện gần đây của các số
-    const recentNumbers = Array(10).fill(0);
-    
-    // Lấy các số dự đoán gần đây từ logs
-    for (const line of recentLogs) {
-        const match = line.match(/Số dự đoán: (\d+)/);
-        if (match) {
-            const num = parseInt(match[1]);
-            if (!isNaN(num) && num >= 0 && num <= 9) {
-                recentNumbers[num]++;
-            }
-        }
-    }
-    
-    // Ưu tiên số ít xuất hiện trong khoảng
-    let leastFrequent = min;
-    let minCount = Infinity;
-    
-    for (let i = min; i <= max; i++) {
-        if (recentNumbers[i] < minCount) {
-            minCount = recentNumbers[i];
-            leastFrequent = i;
-        }
-    }
-    
-    // 70% cơ hội chọn số ít xuất hiện, 30% chọn ngẫu nhiên
-    if (Math.random() < 0.7) {
-        return leastFrequent;
-    } else {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 }
 
 /**
@@ -1228,40 +1172,77 @@ function learnFromPerformance(performanceData, limitedHistory, index, log = fals
     
     if (log) gameLog.info(`10 KẾT QUẢ GẦN NHẤT: Tài ${latestTai}, Xỉu ${latestXiu}`);
     
-    // Nếu có xu hướng rõ ràng trong 10 kết quả gần nhất
-    if (latestTai >= 7) {
-                return {
+    // QUAN TRỌNG: Tăng ngưỡng xu hướng từ 7 lên 8 để tránh phát hiện xu hướng giả
+    // Phân tích một chuỗi lâu hơn và nhạy bén hơn
+    if (latestTai >= 8) {
+        return {
             type: "tài",
-            weight: 8,
+            weight: 12, // Tăng trọng số từ 8 lên 12 khi có xu hướng mạnh
             description: `TỰ HỌC: Theo xu hướng Tài mạnh (${latestTai}/10 kết quả gần nhất)`
         };
-    } else if (latestXiu >= 7) {
-                return {
+    } else if (latestXiu >= 8) {
+        return {
             type: "xỉu",
-            weight: 8,
+            weight: 12, // Tăng trọng số khi có xu hướng mạnh
             description: `TỰ HỌC: Theo xu hướng Xỉu mạnh (${latestXiu}/10 kết quả gần nhất)`
         };
     }
     
-    // Xử lý xu hướng cân bằng hơn
-    if (taiRatio > 0.6) {
-        return {
-            type: "tài", 
-            weight: Math.round(taiRatio * 10),
-            description: `TỰ HỌC: Theo xu hướng Tài (${(taiRatio*100).toFixed(0)}% trong ${total} kết quả gần đây)`
-        };
-    } else if (xiuRatio > 0.6) {
+    // Nếu xu hướng cân bằng hơn, phải xem xét kỹ 5 kết quả gần nhất để phát hiện xu hướng mới
+    const latest5 = latest10.slice(0, 5); // 5 kết quả gần nhất
+    let latest5Tai = 0;
+    let latest5Xiu = 0;
+    
+    for (const line of latest5) {
+        if (typeof line !== 'string') continue;
+        
+        const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+        if (match) {
+            const type = match[2];
+            if (type === "Tài") {
+                latest5Tai++;
+            } else if (type === "Xỉu") {
+                latest5Xiu++;
+            }
+        }
+    }
+    
+    // Phân tích xu hướng trong 5 kết quả gần nhất
+    if (latest5.length >= 3) {
+        if (latest5Tai >= 4) {
+            return {
+                type: "tài",
+                weight: 9, // Trọng số cao cho xu hướng gần đây
+                description: `TỰ HỌC: Xu hướng Tài mới (${latest5Tai}/5 kết quả gần nhất)`
+            };
+        } else if (latest5Xiu >= 4) {
             return {
                 type: "xỉu",
-            weight: Math.round(xiuRatio * 10),
-            description: `TỰ HỌC: Theo xu hướng Xỉu (${(xiuRatio*100).toFixed(0)}% trong ${total} kết quả gần đây)`
+                weight: 9, // Trọng số cao cho xu hướng gần đây
+                description: `TỰ HỌC: Xu hướng Xỉu mới (${latest5Xiu}/5 kết quả gần nhất)`
             };
-    } 
+        }
+    }
     
-    // Nếu không có xu hướng rõ ràng, đề xuất mẫu cân bằng
-            return {
+    // Xử lý xu hướng cân bằng hơn trong toàn bộ dữ liệu
+    if (taiRatio > 0.65) { // Tăng ngưỡng từ 0.6 lên 0.65
+        return {
+            type: "tài", 
+            weight: Math.round(taiRatio * 12), // Tăng hệ số từ 10 lên 12
+            description: `TỰ HỌC: Theo xu hướng Tài (${(taiRatio*100).toFixed(0)}% trong ${total} kết quả gần đây)`
+        };
+    } else if (xiuRatio > 0.65) { // Tăng ngưỡng từ 0.6 lên 0.65
+        return {
+            type: "xỉu",
+            weight: Math.round(xiuRatio * 12), // Tăng hệ số từ 10 lên 12
+            description: `TỰ HỌC: Theo xu hướng Xỉu (${(xiuRatio*100).toFixed(0)}% trong ${total} kết quả gần đây)`
+        };
+    }
+    
+    // Khi không có xu hướng rõ ràng, ưu tiên phân tích đảo chiều
+    return {
         type: taiRatio >= xiuRatio ? "tài" : "xỉu",
-        weight: 2,
+        weight: 1, // Giảm trọng số từ 2 xuống 1 khi không có xu hướng rõ rệt
         description: `TỰ HỌC: Không có xu hướng rõ rệt (Tài: ${taiCount}, Xỉu: ${xiuCount})`
     };
 }
@@ -1269,52 +1250,64 @@ function learnFromPerformance(performanceData, limitedHistory, index, log = fals
 function detectAndCorrectBias(performanceData, log = false) {
     if (!performanceData || performanceData.length < 15) return null;
     
-    // Phân tích 20 DỰ ĐOÁN gần nhất thay vì toàn bộ lịch sử
-    const recent20 = performanceData.slice(-20);
+    // Phân tích 10 DỰ ĐOÁN gần nhất thay vì 20
+    const recent10 = performanceData.slice(-10);
     
     // Đếm dự đoán Tài/Xỉu
-    const taiPredictions = recent20.filter(p => 
-        typeof p === 'string' && p.includes("Số dự đoán:") && p.includes("(Tài)")).length;
-    const xiuPredictions = recent20.filter(p => 
-        typeof p === 'string' && p.includes("Số dự đoán:") && p.includes("(Xỉu)")).length;
+    let taiPredictions = 0;
+    let xiuPredictions = 0;
     
-    // Đếm kết quả thực tế Tài/Xỉu
-    const taiActuals = recent20.filter(p => 
-        typeof p === 'string' && p.includes("Số thực tế:") && p.includes("(Tài)")).length;
-    const xiuActuals = recent20.filter(p => 
-        typeof p === 'string' && p.includes("Số thực tế:") && p.includes("(Xỉu)")).length;
+    for (const line of recent10) {
+        if (typeof line === 'string' && line.includes("Số dự đoán:")) {
+            if (line.includes("(Tài)")) {
+                taiPredictions++;
+            } else if (line.includes("(Xỉu)")) {
+                xiuPredictions++;
+            }
+        }
+    }
     
-    const totalPredictions = taiPredictions + xiuPredictions;
-    const totalActuals = taiActuals + xiuActuals;
+    // THÊM: Kiểm tra thiên lệch nghiêm trọng
+    if (xiuPredictions >= 7) { // Nếu 7/10 lần gần nhất đều dự đoán Xỉu
+        return {
+            type: "tài",
+            weight: 25, // Tăng trọng số rất cao để bắt buộc đổi sang Tài
+            description: `CẢNH BÁO: Đang dự đoán Xỉu quá nhiều (${xiuPredictions}/10 lần), bắt buộc chuyển sang Tài`
+        };
+    } else if (taiPredictions >= 7) { // Nếu 7/10 lần gần nhất đều dự đoán Tài
+        return {
+            type: "xỉu",
+            weight: 25,
+            description: `CẢNH BÁO: Đang dự đoán Tài quá nhiều (${taiPredictions}/10 lần), bắt buộc chuyển sang Xỉu`
+        };
+    }
+
+    // THÊM: Kiểm tra chuỗi dự đoán liên tiếp
+    let consecutiveXiu = 0;
+    let consecutiveTai = 0;
     
-    // In thông tin để kiểm tra
-    if (log) gameLog.info(`====== PHÂN TÍCH THIÊN VỊ (20 KẾT QUẢ GẦN ĐÂY) ======`);
-    if (log) gameLog.info(`Dự đoán: Tài ${taiPredictions}, Xỉu ${xiuPredictions}`);
-    if (log) gameLog.info(`Thực tế: Tài ${taiActuals}, Xỉu ${xiuActuals}`);
-    
-    // ĐIỀU CHỈNH: Chỉ khi tỷ lệ dự đoán khác xa với tỷ lệ thực tế (>30%)
-    if (totalPredictions >= 10 && totalActuals >= 10) {
-        const taiPredictionRatio = taiPredictions / totalPredictions;
-        const taiActualRatio = taiActuals / totalActuals;
-        
-        // Mức độ chênh lệch
-        const biasLevel = Math.abs(taiPredictionRatio - taiActualRatio);
-        
-        // Chỉ điều chỉnh khi độ chênh lệch > 30%
-        if (biasLevel > 0.3) {
-            if (taiPredictionRatio < taiActualRatio) {
-                // Dự đoán Tài quá ít so với thực tế - tăng Tài
+    for (const line of recent10) {
+        if (typeof line === 'string' && line.includes("Số dự đoán:")) {
+            if (line.includes("(Xỉu)")) {
+                consecutiveXiu++;
+                consecutiveTai = 0;
+            } else if (line.includes("(Tài)")) {
+                consecutiveTai++;
+                consecutiveXiu = 0;
+            }
+            
+            // Nếu có 3 dự đoán liên tiếp cùng loại
+            if (consecutiveXiu >= 3) {
                 return {
                     type: "tài",
-                    weight: Math.ceil(biasLevel * 15),
-                    description: `CÂN BẰNG: Tăng cường Tài do dự đoán (${(taiPredictionRatio*100).toFixed(0)}%) thấp hơn thực tế (${(taiActualRatio*100).toFixed(0)}%)`
+                    weight: 20,
+                    description: `CHỐNG LẶP: ${consecutiveXiu} lần dự đoán Xỉu liên tiếp, chuyển sang Tài`
                 };
-            } else {
-                // Dự đoán Tài quá nhiều so với thực tế - tăng Xỉu
+            } else if (consecutiveTai >= 3) {
                 return {
                     type: "xỉu",
-                    weight: Math.ceil(biasLevel * 15),
-                    description: `CÂN BẰNG: Tăng cường Xỉu do dự đoán Tài (${(taiPredictionRatio*100).toFixed(0)}%) cao hơn thực tế (${(taiActualRatio*100).toFixed(0)}%)`
+                    weight: 20,
+                    description: `CHỐNG LẶP: ${consecutiveTai} lần dự đoán Tài liên tiếp, chuyển sang Xỉu`
                 };
             }
         }
@@ -1331,8 +1324,8 @@ function detectAndCorrectBias(performanceData, log = false) {
 function analyzeStreakAndReversal(performanceData) {
     if (!performanceData || performanceData.length < 10) return null;
     
-    // Lấy 20 kết quả gần nhất để phân tích
-    const recentResults = performanceData.slice(-20);
+    // LẤY 20 KẾT QUẢ GẦN NHẤT THEO ĐÚNG THỨ TỰ (MỚI NHẤT Ở ĐẦU)
+    const recentResults = performanceData.slice(-20).reverse();
     
     // Trích xuất chuỗi kết quả thực tế gần đây (Tài/Xỉu)
     const resultSequence = [];
@@ -1350,28 +1343,29 @@ function analyzeStreakAndReversal(performanceData) {
     
     gameLog.info(`PHÂN TÍCH CHUỖI: ${resultSequence.join(' → ')}`);
     
-    // 1. PHÁT HIỆN BỆT (STREAK)
+    // 1. PHÁT HIỆN BỆT (STREAK) - LOGIC MỚI
     let currentStreak = 1;
-    let maxStreak = 1;
     let currentType = resultSequence[0];
     
-    // Tính độ dài chuỗi hiện tại
+    // Đếm chuỗi hiện tại từ kết quả mới nhất
     for (let i = 1; i < resultSequence.length; i++) {
-        if (resultSequence[i] === resultSequence[i-1]) {
+        if (resultSequence[i] === currentType) {
             currentStreak++;
-            if (i === resultSequence.length - 1) {
-                // Đây là phần tử cuối cùng, cập nhật maxStreak nếu cần
-                maxStreak = Math.max(maxStreak, currentStreak);
-                currentType = resultSequence[i];
-            }
         } else {
-            // Kết thúc một chuỗi, cập nhật maxStreak
-            if (currentStreak > maxStreak) {
-                maxStreak = currentStreak;
-                currentType = resultSequence[i-1];
-            }
-            currentStreak = 1;
+            break; // Dừng ngay khi gặp kết quả khác
         }
+    }
+    
+    gameLog.info(`Phát hiện chuỗi hiện tại: ${currentStreak} lần ${currentType} liên tiếp`);
+    
+    // TĂNG MẠNH TRỌNG SỐ CHO CHIẾN LƯỢC THEO BỆT
+    if (currentStreak >= 3) {
+        // Nếu đang có chuỗi Tài/Xỉu từ 3 lên, ưu tiên cao cho việc theo bệt
+        return {
+            type: currentType.toLowerCase(),
+            weight: currentStreak * 5, // Tăng trọng số lên gấp 5 lần độ dài chuỗi
+            description: `THEO BỆT MẠNH: ${currentType} đang có ${currentStreak} lần liên tiếp`
+        };
     }
     
     // 2. PHÂN TÍCH MẪU BẺ (REVERSAL PATTERN)
@@ -1390,64 +1384,246 @@ function analyzeStreakAndReversal(performanceData) {
     const reversalRate = reversalCount / (last10.length - 1);
     
     gameLog.info(`Chuỗi hiện tại: ${currentStreak} lần ${currentType} liên tiếp`);
-    gameLog.info(`Chuỗi dài nhất: ${maxStreak} lần ${currentType}`);
+    gameLog.info(`Chuỗi dài nhất: ${currentStreak} lần ${currentType}`);
     gameLog.info(`Tỷ lệ đổi chiều: ${(reversalRate * 100).toFixed(0)}%`);
     
-    // 3. QUYẾT ĐỊNH CHIẾN LƯỢC
+    // 3. QUYẾT ĐỊNH CHIẾN LƯỢC - SỬA ĐỔI LỚN
     
-    // Nếu đang có chuỗi dài (từ 3 trở lên)
-    if (currentStreak >= 3) {
-        // Kiểm tra tỷ lệ đổi chiều để quyết định có nên bẻ hay không
-        if (reversalRate < 0.3) {
-            // Tỷ lệ đổi chiều thấp, xu hướng mạnh, nên THEO BỆT
-            return {
-                type: currentType.toLowerCase(),
-                weight: currentStreak + 2,
-                description: `THEO BỆT: ${currentType} đã xuất hiện ${currentStreak} lần liên tiếp, xu hướng mạnh`
-            };
+    // Phân tích chuỗi hiện tại đang hình thành tại vị trí mới nhất
+    const currentFormingStreak = [];
+    let tempStreak = 1;
+    let tempType = resultSequence[0];
+    
+    for (let i = 1; i < resultSequence.length; i++) {
+        if (resultSequence[i] === tempType) {
+            tempStreak++;
         } else {
-            // Tỷ lệ đổi chiều cao, có thể sắp bẻ, nên BẺ
+            currentFormingStreak.push({type: tempType, length: tempStreak});
+            tempType = resultSequence[i];
+            tempStreak = 1;
+        }
+    }
+    
+    // Thêm chuỗi cuối cùng
+    currentFormingStreak.push({type: tempType, length: tempStreak});
+    
+    // Phân tích chiều dài trung bình các chuỗi
+    const avgStreakLength = currentFormingStreak.reduce((sum, streak) => sum + streak.length, 0) / currentFormingStreak.length;
+    
+    gameLog.info(`Chiều dài trung bình các chuỗi: ${avgStreakLength.toFixed(1)}`);
+    
+    // Quyết định chiến lược dựa trên THÔNG TIN MỚI
+    if (currentStreak >= 3) {
+        // Nếu chuỗi hiện tại đã vượt quá chiều dài trung bình, khả năng cao sẽ đảo chiều
+        if (currentStreak > avgStreakLength * 1.5) {
             const oppositeType = currentType === "Tài" ? "xỉu" : "tài";
             return {
                 type: oppositeType,
-                weight: currentStreak + 1,
+                weight: Math.min(currentStreak + 5, 15), // Tăng trọng số tối đa từ (currentStreak + 1) lên (currentStreak + 5, tối đa 15)
+                description: `BẺ XU HƯỚNG: ${currentType} đã xuất hiện ${currentStreak} lần (vượt trung bình ${avgStreakLength.toFixed(1)}), khả năng cao sẽ đổi chiều`
+            };
+        } else if (reversalRate < 0.25) { // Giảm ngưỡng từ 0.3 xuống 0.25
+            // Tỷ lệ đổi chiều rất thấp, xu hướng mạnh, nên THEO BỆT
+            return {
+                type: currentType.toLowerCase(),
+                weight: currentStreak + 4, // Tăng trọng số từ (currentStreak + 2) lên (currentStreak + 4)
+                description: `THEO BỆT: ${currentType} đã xuất hiện ${currentStreak} lần liên tiếp, xu hướng rất mạnh`
+            };
+        } else {
+            // Phân tích thêm pattern đối chiếu
+            // Tìm tất cả các chuỗi trong quá khứ có cùng độ dài với chuỗi hiện tại
+            const similarStreaks = currentFormingStreak.filter(streak => 
+                streak.length >= currentStreak - 1 && streak.length <= currentStreak + 1);
+            
+            // Nếu có các chuỗi tương tự, xem điều gì xảy ra sau đó
+            if (similarStreaks.length > 1) {
+                let continueCount = 0;
+                let reverseCount = 0;
+                
+                for (let i = 0; i < currentFormingStreak.length - 1; i++) {
+                    const streak = currentFormingStreak[i];
+                    if (streak.length >= currentStreak - 1 && streak.length <= currentStreak + 1) {
+                        // Kiểm tra chuỗi tiếp theo
+                        if (currentFormingStreak[i+1].type === streak.type) {
+                            continueCount++;
+                        } else {
+                            reverseCount++;
+                        }
+                    }
+                }
+                
+                if (continueCount > reverseCount) {
+                    // Xu hướng thường tiếp tục sau chuỗi tương tự
+                    return {
+                        type: currentType.toLowerCase(),
+                        weight: 8, // Trọng số cao
+                        description: `THEO PATTERN: Sau chuỗi ${currentStreak} lần ${currentType}, thường tiếp tục (${continueCount}/${continueCount+reverseCount} lần)`
+                    };
+                } else {
+                    // Xu hướng thường đảo chiều sau chuỗi tương tự
+                    const oppositeType = currentType === "Tài" ? "xỉu" : "tài";
+                    return {
+                        type: oppositeType,
+                        weight: 8, // Trọng số cao
+                        description: `ĐẢO CHIỀU THEO PATTERN: Sau chuỗi ${currentStreak} lần ${currentType}, thường đảo chiều (${reverseCount}/${continueCount+reverseCount} lần)`
+                    };
+                }
+            }
+            
+            // Nếu không có đủ dữ liệu pattern, dùng chiến lược mặc định
+            const oppositeType = currentType === "Tài" ? "xỉu" : "tài";
+            return {
+                type: oppositeType,
+                weight: currentStreak + 2, // Giữ nguyên trọng số
                 description: `BẺ XU HƯỚNG: ${currentType} đã xuất hiện ${currentStreak} lần liên tiếp, có thể sắp đổi chiều`
             };
         }
     }
     
-    // Nếu tỷ lệ đổi chiều cao (>50%), thường là đổi chiều liên tục
-    if (reversalRate > 0.5) {
+    // Nếu tỷ lệ đổi chiều cao (>60%), thường là đổi chiều liên tục - Tăng ngưỡng từ 0.5 lên 0.6
+    if (reversalRate > 0.6) {
         // Nếu kết quả gần nhất là Tài, thì kết quả tiếp theo có thể là Xỉu và ngược lại
-        const lastResult = resultSequence[resultSequence.length - 1];
+        const lastResult = resultSequence[0]; // Lấy kết quả gần nhất (đầu mảng)
         const oppositeType = lastResult === "Tài" ? "xỉu" : "tài";
         
-            return {
+        return {
             type: oppositeType,
-            weight: Math.round(reversalRate * 10),
+            weight: Math.round(reversalRate * 12), // Tăng hệ số từ 10 lên 12
             description: `ĐỔI CHIỀU LIÊN TỤC: Sau ${lastResult} thường là ${oppositeType === "tài" ? "Tài" : "Xỉu"} (tỷ lệ đổi chiều ${(reversalRate * 100).toFixed(0)}%)`
         };
     }
     
-    // Nếu không có mẫu rõ ràng, thì xem xét xu hướng chung
+    // Nếu không có mẫu rõ ràng, thì xem xét xu hướng chung - Tăng hệ số từ 1.5 lên 1.7
     const taiCount = resultSequence.filter(r => r === "Tài").length;
     const xiuCount = resultSequence.length - taiCount;
     
-    if (taiCount > xiuCount * 1.5) {
+    if (taiCount > xiuCount * 1.7) {
         return {
             type: "tài",
-            weight: 3,
+            weight: 4, // Tăng trọng số từ 3 lên 4
             description: `XU HƯỚNG TÀI: Tài chiếm ưu thế (${taiCount}/${resultSequence.length})`
         };
-    } else if (xiuCount > taiCount * 1.5) {
-            return {
-                type: "xỉu",
-            weight: 3,
+    } else if (xiuCount > taiCount * 1.7) {
+        return {
+            type: "xỉu",
+            weight: 4, // Tăng trọng số từ 3 lên 4
             description: `XU HƯỚNG XỈU: Xỉu chiếm ưu thế (${xiuCount}/${resultSequence.length})`
-            };
+        };
     }
     
     return null;
+}
+
+function analyzeHistory(performanceData) {
+    if (!performanceData || performanceData.length < 10) return null;
+    
+    // Chỉ lấy 30 kết quả gần nhất thay vì 50 để tập trung vào xu hướng hiện tại
+    const recentResults = performanceData.slice(-30).reverse();
+    
+    // Phân tích kết quả thực tế
+    const resultSequence = [];
+    for (const line of recentResults) {
+        if (typeof line !== 'string') continue;
+        const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+        if (match) {
+            resultSequence.push({
+                number: parseInt(match[1]),
+                type: match[2]
+            });
+        }
+    }
+
+    if (resultSequence.length === 0) return null;
+
+    // === PHÂN TÍCH BỆT HIỆN TẠI ===
+    let currentStreak = 1;
+    let currentType = resultSequence[0]?.type;
+    
+    for (let i = 1; i < resultSequence.length; i++) {
+        if (resultSequence[i].type === currentType) {
+            currentStreak++;
+        } else {
+            break;
+        }
+    }
+
+    // Nếu có bệt từ 3 trở lên, ưu tiên cao nhất
+    if (currentStreak >= 3) {
+        // Tăng trọng số theo độ dài của bệt
+        const weight = currentStreak * 8; // Tăng hệ số từ 5 lên 8
+        return {
+            type: currentType.toLowerCase(),
+            weight: weight,
+            description: `THEO BỆT MẠNH: ${currentType} đang có ${currentStreak} lần liên tiếp`
+        };
+    }
+
+    // === PHÂN TÍCH 10 KẾT QUẢ GẦN NHẤT ===
+    const recent10 = resultSequence.slice(0, 10);
+    const taiCount10 = recent10.filter(r => r.type === "Tài").length;
+    const xiuCount10 = recent10.length - taiCount10;
+
+    // Nếu có xu hướng rõ ràng trong 10 kết quả gần nhất
+    if (taiCount10 >= 7) {
+        return {
+            type: "tài",
+            weight: 15,
+            description: `XU HƯỚNG TÀI MẠNH: ${taiCount10}/10 kết quả gần nhất`
+        };
+    } else if (xiuCount10 >= 7) {
+        return {
+            type: "xỉu",
+            weight: 15,
+            description: `XU HƯỚNG XỈU MẠNH: ${xiuCount10}/10 kết quả gần nhất`
+        };
+    }
+
+    // === PHÂN TÍCH 5 KẾT QUẢ GẦN NHẤT ===
+    const recent5 = resultSequence.slice(0, 5);
+    const taiCount5 = recent5.filter(r => r.type === "Tài").length;
+    const xiuCount5 = recent5.length - taiCount5;
+
+    // Phát hiện xu hướng ngắn hạn mạnh
+    if (taiCount5 >= 4) {
+        return {
+            type: "tài",
+            weight: 12,
+            description: `XU HƯỚNG TÀI NGẮN: ${taiCount5}/5 kết quả gần nhất`
+        };
+    } else if (xiuCount5 >= 4) {
+        return {
+            type: "xỉu",
+            weight: 12,
+            description: `XU HƯỚNG XỈU NGẮN: ${xiuCount5}/5 kết quả gần nhất`
+        };
+    }
+
+    // === PHÂN TÍCH MẪU LẶP LẠI ===
+    // Kiểm tra mẫu lặp lại trong 3 kết quả gần nhất
+    const recent3 = resultSequence.slice(0, 3);
+    if (recent3.length === 3) {
+        if (recent3.every(r => r.type === "Tài")) {
+            return {
+                type: "xỉu",
+                weight: 10,
+                description: "ĐẢO CHIỀU: 3 lần Tài liên tiếp, khả năng cao sẽ đổi sang Xỉu"
+            };
+        } else if (recent3.every(r => r.type === "Xỉu")) {
+            return {
+                type: "tài",
+                weight: 10,
+                description: "ĐẢO CHIỀU: 3 lần Xỉu liên tiếp, khả năng cao sẽ đổi sang Tài"
+            };
+        }
+    }
+
+    // === XỬ LÝ MẶC ĐỊNH ===
+    // Nếu không có mẫu rõ ràng, dựa vào xu hướng chung của 10 kết quả gần nhất
+    return {
+        type: taiCount10 >= xiuCount10 ? "tài" : "xỉu",
+        weight: 5,
+        description: `Xu hướng yếu: ${taiCount10 >= xiuCount10 ? "Tài" : "Xỉu"} chiếm ưu thế nhẹ`
+    };
 }
 
 module.exports = predictNumbers;

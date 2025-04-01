@@ -1,30 +1,39 @@
 {
   "predictions": [
-    1
+    2
   ],
   "stats": {
-    "tai": 8,
+    "tai": 3,
     "xiu": 7,
-    "taiPercent": "53.33",
-    "xiuPercent": "46.67",
-    "prediction": "Tài",
-    "confidence": 0.5333333333333333
+    "taiPercent": "30.00",
+    "xiuPercent": "70.00",
+    "prediction": "Xỉu",
+    "confidence": 0.7
   },
-  "timestamp": "2025-03-31T16:10:04.296Z",
-  "drawId": "202503311293",
+  "timestamp": "2025-04-01T15:18:58.633Z",
+  "timeVN": "01/04/2025 10:18:58 PM",
+  "drawId": "202504011226",
   "votes": {
-    "tài": 21,
-    "xỉu": 29
+    "tài": 2,
+    "xỉu": 12
   },
   "strategies": [
-    "Xu hướng yếu: Tài chiếm ưu thế nhẹ",
-    "Phân tích tần suất: Chọn xỉu do xuất hiện ít hơn (Tài:8, Xỉu:7) (3 phiếu)",
-    "Phân tích chu kỳ: Chu kỳ: Sau mẫu \"TX\" → xỉu (100%, 3 lần) (3 phiếu)",
-    "Tự học: TỰ HỌC: Theo xu hướng Tài (67% trong 30 kết quả gần đây) (8 phiếu)",
-    "Điều chỉnh: CHỐNG LẶP: 3 lần dự đoán Tài liên tiếp, chuyển sang Xỉu (20 phiếu)",
-    "Phân tích thời gian: Theo thống kê, vào Thứ hai có xu hướng ra Tài nhiều hơn (1 phiếu)",
-    "Cân bằng dự đoán: +3 cho Xỉu do dự đoán Tài quá nhiều (73%)",
-    "Xu hướng thực tế: +2 cho Tài do Tài xuất hiện nhiều (73%)"
+    "Phân tích Tài/Xỉu: Xỉu xuất hiện nhiều hơn (7/10) (9 phiếu)",
+    "Phân tích tần suất: Chọn tài do tỷ lệ xuất hiện thấp hơn (2 phiếu)",
+    "Phân tích xu hướng: Theo dự đoán cơ bản",
+    "Phân tích chu kỳ: Không phát hiện chu kỳ rõ ràng",
+    "Phân tích thời gian: Theo thống kê, vào Thứ ba có xu hướng ra Xỉu nhiều hơn"
   ],
-  "indexPredicted": 1
+  "indexPredicted": 0,
+  "limits": {
+    "main": 10,
+    "all": [
+      10,
+      15
+    ],
+    "predictions": {
+      "10": 2,
+      "15": 2
+    }
+  }
 }

@@ -1,0 +1,11 @@
+# File Performance với Limit=15 và Index=0
+
+
+Chu kỳ | 202504011215 | 01/04/2025 10:11:32 PM | Số thực tế: 6 (Tài) | Số dự đoán: 1 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504011219 | 01/04/2025 10:13:43 PM | Số thực tế: 4 (Xỉu) | Số dự đoán: 1 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504011220 | 01/04/2025 10:14:28 PM | Số thực tế: 5 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504011221 | 01/04/2025 10:15:12 PM | Số thực tế: 2 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504011222 | 01/04/2025 10:15:58 PM | Số thực tế: 3 (Xỉu) | Số dự đoán: 0 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504011223 | 01/04/2025 10:16:43 PM | Số thực tế: 3 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504011224 | 01/04/2025 10:17:27 PM | Số thực tế: 4 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504011225 | 01/04/2025 10:18:13 PM | Số thực tế: 9 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai

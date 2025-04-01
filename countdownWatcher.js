@@ -32,7 +32,6 @@ async function watchCountdown() {
 
   console.log("Tìm thấy mục 'Miền Bắc VIP 45 giây', bắt đầu theo dõi countdown...");
 
-  let lastCountdown = "";
   let isPredicting = false;
   let hasPredicted = false;  // New flag to track if prediction has been made
 
@@ -61,7 +60,7 @@ async function watchCountdown() {
         hasPredicted = true;  // Set flag to true after prediction
         try {
           const history = await getLotteryNumbers()
-          const arrays = await predictNumbers(history, 0, { limitList: [10, 15], limitMain: 10 }, ["taixiu_history", true], false);
+          const arrays = await predictNumbers(history, 0, { limitList: [5, 10, 15], limitMain: 15 }, ["taixiu_history", true], false);
           console.log(arrays.predictions)
 
         } catch (error) {

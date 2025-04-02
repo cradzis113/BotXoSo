@@ -1,75 +1,38 @@
 {
   "predictions": [
-    1
+    0
   ],
   "stats": {
-    "accuracy": 0.5,
-    "consecutiveWrong": 2
+    "accuracy": 0.6,
+    "consecutiveWrong": 0
   },
-  "timestamp": "2025-04-02T02:56:34.758Z",
-  "timeVN": "02/04/2025 9:56:34 AM",
-  "drawId": "202504020236",
+  "timestamp": "2025-04-02T04:58:05.098Z",
+  "timeVN": "02/04/2025 11:58:05 AM",
+  "drawId": "202504020397",
   "votes": {
-    "tài": 1,
-    "xỉu": 0
+    "tài": 0,
+    "xỉu": 1
   },
   "strategies": [
-    "Sử dụng dự đoán tổng hợp từ nhiều mô hình",
-    {
-      "description": "Dự đoán từ phân tích cơ bản",
-      "number": 2,
-      "confidence": "80.0%",
-      "weight": 25
-    },
-    {
-      "description": "Dự đoán thích ứng",
-      "number": 6,
-      "confidence": "70.0%",
-      "weight": 15
-    },
-    {
-      "description": "Dự đoán từ kết quả thực tế",
-      "number": 3,
-      "confidence": "75.0%",
-      "weight": 20
-    },
-    {
-      "description": "Dự đoán từ nhận dạng mẫu",
-      "number": 3,
-      "confidence": "75.0%",
-      "weight": 18
-    },
-    {
-      "description": "Dự đoán từ phân tích thống kê",
-      "number": 6,
-      "confidence": "80.0%",
-      "weight": 17
-    },
-    {
-      "description": "Dự đoán từ học tăng cường",
-      "number": 4,
-      "confidence": "70.0%",
-      "weight": 20
-    },
-    {
-      "description": "Dự đoán từ phân tích kết quả gần đây",
-      "number": 1,
-      "confidence": "85.0%",
-      "weight": 22
-    }
+    "Sử dụng kết quả từ limit=15 (hiệu suất: 60.0%)"
   ],
   "indexPredicted": 0,
   "limits": {
     "main": 15,
+    "originalMain": 15,
+    "effective": [
+      15,
+      5
+    ],
     "all": [
       5,
       10,
       15
     ],
     "predictions": {
-      "5": 2,
-      "10": 2,
-      "15": 1
+      "5": 9,
+      "10": 0,
+      "15": 0
     }
   }
 }

@@ -1,0 +1,7 @@
+# File Performance với Limit=5 và Index=0
+
+
+Chu kỳ | 202504020232 | 02/04/2025 9:53:34 AM | Số thực tế: 8 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504020233 | 02/04/2025 9:54:19 AM | Số thực tế: 6 (Tài) | Số dự đoán: 0 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504020234 | 02/04/2025 9:55:03 AM | Số thực tế: 5 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504020235 | 02/04/2025 9:55:50 AM | Số thực tế: 3 (Xỉu) | Số dự đoán: 1 (Xỉu) | Vị trí: 0 | Đúng

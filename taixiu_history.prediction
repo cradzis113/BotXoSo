@@ -1,33 +1,26 @@
 {
   "predictions": [
-    1
+    2
   ],
   "stats": {
-    "accuracy": 0.7,
+    "accuracy": 0,
     "consecutiveWrong": 0
   },
-  "timestamp": "2025-04-03T07:22:03.147Z",
-  "timeVN": "03/04/2025 2:22:03 PM",
-  "drawId": "202504030590",
+  "timestamp": "2025-04-03T09:43:02.054Z",
+  "timeVN": "03/04/2025 4:43:02 PM",
+  "drawId": "202504030778",
   "votes": {
     "tài": 0,
     "xỉu": 1
   },
   "strategies": [
-    "Sử dụng kết quả từ limit=5 (hiệu suất: 70.0%)",
-    "Đã thay đổi limitMain từ 15 sang 5 do hiệu suất tốt hơn"
+    "Sử dụng kết quả từ limitMain=15 (không có limit hiệu quả)"
   ],
   "indexPredicted": 0,
   "limits": {
-    "main": 5,
+    "main": 15,
     "originalMain": 15,
-    "effective": [
-      5,
-      25,
-      10,
-      20,
-      15
-    ],
+    "effective": [],
     "all": [
       5,
       10,
@@ -36,11 +29,11 @@
       25
     ],
     "predictions": {
-      "5": 1,
+      "5": 3,
       "10": 2,
-      "15": 1,
-      "20": 2,
-      "25": 1
+      "15": 2,
+      "20": 4,
+      "25": 2
     }
   }
 }

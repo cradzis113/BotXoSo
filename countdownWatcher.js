@@ -61,7 +61,7 @@ async function watchCountdown() {
         try {
           const history = await getLotteryNumbers()
           const arrays = await predictNumbers(history, 0, { limitList: [5, 10, 15, 20, 25], limitMain: 15 }, ["taixiu_history", true], false);
-          console.log(arrays.predictions)
+          console.log(arrays)
 
         } catch (error) {
           console.error("Lỗi khi gọi predictNextNumber:", error);

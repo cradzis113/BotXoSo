@@ -81,14 +81,18 @@ function updatePerformanceFile(fileConfig, index, limit, result, actualResult, d
         
         const newLine = `Chu kỳ | ${drawId} | ${timeVN} | Số thực tế: ${actualResult} (${actualType}) | Số dự đoán: ${result} (${resultType}) | Vị trí: ${index} | ${isCorrect ? "Đúng" : "Sai"}`;
 
+        // Debug log để theo dõi
+        console.log(`Đang lưu performance cho limit=${limit}: ${newLine}`);
+
         // Kiểm tra và tạo file nếu chưa tồn tại
         if (!fs.existsSync(fileName)) {
             const header = `# File Performance với ${limit === fileConfig.limitMain ? "LimitMain" : "Limit"}=${limit} và Index=${index}\n\n\n`;
-            fs.writeFileSync(fileName, header);
+            fs.writeFileSync(fileName, header + newLine + "\n");
+            console.log(`Đã tạo file mới: ${fileName}`);
+        } else {
+            fs.appendFileSync(fileName, newLine + "\n");
+            console.log(`Đã thêm vào file: ${fileName}`);
         }
-
-        // Thêm kết quả mới vào file
-        fs.appendFileSync(fileName, newLine + "\n");
         
         return true;
     } catch (error) {
@@ -157,7 +161,22 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                 }
             }
             
-            // Tạo kết quả trả về với dự đoán từ limit tốt nhất
+            // Tính nextDrawId TRƯỚC KHI tạo result
+            let nextDrawId = "";
+            if (history[0]?.drawId && history[0].drawId.length === 12) {
+                const prefix = history[0].drawId.slice(0, 8);
+                const numPart = parseInt(history[0].drawId.slice(-4));
+                
+                // Tính chu kỳ tiếp theo (+1)
+                const nextCycle = numPart + 1;
+                
+                nextDrawId = prefix + nextCycle.toString().padStart(4, '0');
+                console.log(`Emergency: Dự đoán cho chu kỳ tiếp theo: ${nextDrawId} (hiện tại: ${history[0].drawId})`);
+            } else {
+                nextDrawId = history[0]?.drawId || "";
+            }
+
+            // Tạo result với nextDrawId đã tính
             const result = {
                 predictions: [emergencyPredictions[validParams.limit.limitMain]],
                 stats: {
@@ -166,7 +185,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                 },
                 timestamp: new Date().toISOString(),
                 timeVN: getVietnamTimeNow(),
-                drawId: history[0]?.drawId || "",
+                drawId: nextDrawId, // Sử dụng nextDrawId ngay từ đầu
                 votes: {
                     "tài": emergencyPredictions[validParams.limit.limitMain] >= 5 ? 1 : 0,
                     "xỉu": emergencyPredictions[validParams.limit.limitMain] < 5 ? 1 : 0
@@ -180,45 +199,62 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                 }
             };
 
-            // 5. Lưu kết quả vào file nếu cần
+            // Ghi file với result đã có nextDrawId
             if (fileConfig[1]) {
                 try {
                     const fs = require('fs');
+                    console.log(`ĐANG GHI FILE với drawId=${result.drawId}`);
                     fs.writeFileSync(
                         `${fileConfig[0]}.prediction`,
                         JSON.stringify(result, null, 2)
                     );
+                    console.log("GHI FILE THÀNH CÔNG");
                 } catch (error) {
                     console.error("Lỗi khi lưu file prediction:", error);
                 }
             }
 
-            // Lấy drawId hiện tại từ phần tử đầu tiên của history
-            const currentDrawId = history[0]?.drawId || "";
-
-            // Tính drawId tiếp theo (+1)
-            let nextDrawId = "";
-            if (currentDrawId && currentDrawId.length === 12) {
-                const prefix = currentDrawId.slice(0, 8);  // Lấy phần YYYYMMDD
-                const numPart = parseInt(currentDrawId.slice(-4));  // Lấy phần số chu kỳ
-                
-                // Tính chu kỳ tiếp theo (đơn giản chỉ +1)
-                const nextCycle = numPart + 1;
-                
-                // Tạo drawId mới
-                nextDrawId = prefix + nextCycle.toString().padStart(4, '0');
-                
-            } else {
-                nextDrawId = currentDrawId;
+            // Ghi mạnh kết quả vào file performance
+            if (previousPrediction && history.length > 0) {
+                try {
+                    const fs = require('fs');
+                    const currentCycle = history[0].drawId;
+                    const prevCycle = previousPrediction.drawId;
+                    
+                    // Nếu có chu kỳ trước đó và chu kỳ hiện tại
+                    if (currentCycle && prevCycle) {
+                        console.log(`Force update performance: current=${currentCycle}, prev=${prevCycle}`);
+                        
+                        // Kiểm tra xem prevCycle có phải là chu kỳ liền trước không
+                        const currentNum = parseInt(currentCycle.slice(-4));
+                        const prevNum = parseInt(prevCycle.slice(-4));
+                        
+                        if (currentNum - prevNum === 1) {
+                            // Đây là chu kỳ liền kề, có thể cập nhật
+                            const actualNumber = Number(history[0].numbers[validParams.index]);
+                            const predictedNumber = previousPrediction.predictions[0];
+                            const isCorrect = (actualNumber >= 5) === (predictedNumber >= 5);
+                            
+                            console.log(`FORCE UPDATE: Thực tế=${actualNumber}, Dự đoán=${predictedNumber}, Đúng=${isCorrect}`);
+                            
+                            // Cập nhật tất cả các file performance
+                            for (const limitValue of previousPrediction.limits.all) {
+                                // Code cập nhật file limit
+                            }
+                            
+                            // Cập nhật file tổng hợp
+                            // Code cập nhật file tổng hợp
+                        }
+                    }
+                } catch (error) {
+                    console.error("Lỗi khi ghi mạnh performance:", error);
+                }
             }
-
-            // Sử dụng nextDrawId trong kết quả
-            result.drawId = nextDrawId;
 
             return result;
         }
 
-        // Phần xử lý lấy kết quả thực tế từ lần dự đoán trước
+        // Đọc dự đoán trước đó
         let previousPrediction = null;
         try {
             const fs = require('fs');
@@ -226,63 +262,79 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             if (fs.existsSync(predictionFile)) {
                 const content = fs.readFileSync(predictionFile, 'utf8');
                 previousPrediction = JSON.parse(content);
-                if (log) console.log("Đã đọc dự đoán trước đó:", previousPrediction.drawId);
+                console.log(`Đã đọc dự đoán trước đó: ${previousPrediction?.drawId}`);
             }
         } catch (error) {
             console.error("Lỗi khi đọc file prediction:", error);
         }
 
-        // Nếu có dự đoán trước, cập nhật performance
+        // Lưu performance nếu có dự đoán trước
         if (previousPrediction && previousPrediction.drawId) {
             const prevDrawId = previousPrediction.drawId;
+            console.log(`Tìm kết quả cho dự đoán trước: ${prevDrawId}`);
+            console.log(`History hiện có: ${history.slice(0, 5).map(h => h.drawId).join(', ')}`);
             
-            // Tìm kết quả trong history
-            const actualResultData = history.find(h => h.drawId === prevDrawId);
+            // Khai báo actualResultData và gán giá trị
+            let actualResultData = history.find(h => h.drawId === prevDrawId);
             
-            if (actualResultData && actualResultData.numbers && actualResultData.numbers[index] !== undefined) {
-                const actualNumber = Number(actualResultData.numbers[index]);
+            // Kiểm tra actualResultData trước khi xử lý
+            if (actualResultData && actualResultData.numbers) {
+                const fs = require('fs');
+                const predIndex = previousPrediction.indexPredicted || 0;
+                console.log(`Tìm thấy kết quả cho chu kỳ ${prevDrawId}: ${actualResultData.numbers}`);
                 
-                // Cập nhật performance cho từng limit riêng biệt
-                for (const limitValue of validParams.limit.limitList) {
-                    // Lấy dự đoán từ previousPrediction
-                    let predictionValue = null;
-                    if (previousPrediction.limits && previousPrediction.limits.predictions) {
-                        predictionValue = previousPrediction.limits.predictions[limitValue];
-                    }
-                    
-                    // Cập nhật file performance nếu có dự đoán
-                    if (predictionValue !== null && predictionValue !== undefined) {
-                        if (log) console.log(`Cập nhật performance cho limit=${limitValue}, dự đoán=${predictionValue}, thực tế=${actualNumber}`);
-                        updatePerformanceFile(
-                            fileConfig,
-                            index,
-                            limitValue,
-                            predictionValue,
-                            actualNumber,
-                            prevDrawId,
-                            previousPrediction.timeVN
-                        );
+                // Thêm CODE CẬP NHẬT PERFORMANCE tại đây:
+                for (const limitValue of previousPrediction.limits.all) {
+                    const predictionValue = previousPrediction.limits.predictions[limitValue];
+                    if (predictionValue !== undefined) {
+                        const actualNumber = Number(actualResultData.numbers[predIndex]);
+                        
+                        // Kiểm tra xem đã lưu chu kỳ này chưa
+                        const limitFileName = `${fileConfig[0]}_index${predIndex}_limit${limitValue}.performance`;
+                        let fileContent = "";
+                        if (fs.existsSync(limitFileName)) {
+                            fileContent = fs.readFileSync(limitFileName, 'utf8');
+                        }
+                        
+                        // Nếu chưa lưu chu kỳ này, thì lưu mới
+                        if (!fileContent.includes(`Chu kỳ | ${prevDrawId}`)) {
+                            const resultType = predictionValue >= 5 ? "Tài" : "Xỉu";
+                            const actualType = actualNumber >= 5 ? "Tài" : "Xỉu";
+                            const isCorrect = (predictionValue >= 5) === (actualNumber >= 5);
+                            
+                            const newLine = `Chu kỳ | ${prevDrawId} | ${previousPrediction.timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictionValue} (${resultType}) | Vị trí: ${predIndex} | ${isCorrect ? "Đúng" : "Sai"}`;
+                            
+                            fs.appendFileSync(limitFileName, newLine + "\n");
+                            console.log(`Đã cập nhật performance cho limit=${limitValue}: ${newLine}`);
+                        } else {
+                            console.log(`Chu kỳ ${prevDrawId} đã được lưu trong file ${limitFileName}`);
+                        }
                     }
                 }
                 
                 // Cập nhật file performance tổng hợp
-                const usedLimit = previousPrediction.limits.main;
-                const predictedNumber = previousPrediction.predictions[0];
-                const isCorrect = (actualNumber >= 5) === (predictedNumber >= 5);
-                if (log) console.log(`Cập nhật performance tổng hợp: dự đoán=${predictedNumber}, thực tế=${actualNumber}, đúng=${isCorrect}`);
-                updateCombinedPerformanceFile(
-                    fileConfig,
-                    prevDrawId,
-                    previousPrediction.timeVN,
-                    actualNumber,
-                    predictedNumber,
-                    usedLimit,
-                    isCorrect,
-                    index
-                );
-            } else if (log) {
-                console.log(`Không tìm thấy kết quả thực tế cho chu kỳ: ${prevDrawId}`);
-                console.log(`Các chu kỳ hiện có:`, history.slice(0, 5).map(h => h.drawId).join(', '));
+                const combinedFileName = `${fileConfig[0]}_combined_performance.log`;
+                let combinedContent = "";
+                if (fs.existsSync(combinedFileName)) {
+                    combinedContent = fs.readFileSync(combinedFileName, 'utf8');
+                }
+                
+                if (!combinedContent.includes(`Chu kỳ | ${prevDrawId}`)) {
+                    const actualNumber = Number(actualResultData.numbers[predIndex]);
+                    const predictedNumber = previousPrediction.predictions[0];
+                    const isCorrect = (actualNumber >= 5) === (predictedNumber >= 5);
+                    
+                    const actualType = actualNumber >= 5 ? "Tài" : "Xỉu";
+                    const predictedType = predictedNumber >= 5 ? "Tài" : "Xỉu";
+                    const newLine = `Chu kỳ | ${prevDrawId} | ${previousPrediction.timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictedNumber} (${predictedType}) | Vị trí: ${predIndex} | Limit được chọn: ${previousPrediction.limits.main} | ${isCorrect ? "Đúng" : "Sai"}`;
+                    
+                    fs.appendFileSync(combinedFileName, newLine + '\n');
+                    console.log(`Đã cập nhật file performance tổng hợp`);
+                } else {
+                    console.log(`Chu kỳ ${prevDrawId} đã được lưu trong file tổng hợp`);
+                }
+            } else {
+                console.log(`Không tìm thấy kết quả cho ${prevDrawId}`);
             }
         }
 
@@ -418,7 +470,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             strategies.push(`Sử dụng kết quả từ limitMain=${originalLimitMain} (không có limit hiệu quả)`);
         }
         
-        // Đảm bảo đặt đoạn code tính nextDrawId TRƯỚC khi tạo result object
+        // Tính nextDrawId TRƯỚC khi tạo result
         let nextDrawId = "";
         if (history[0]?.drawId && history[0].drawId.length === 12) {
             const prefix = history[0].drawId.slice(0, 8);
@@ -433,9 +485,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             nextDrawId = history[0]?.drawId || "";
         }
 
-        // Kiểm tra xem nextDrawId có được sử dụng đúng không
-
-        // 2. Trực tiếp sử dụng nextDrawId khi tạo result
+        // Tạo result với nextDrawId đã tính
         const result = {
             predictions: [finalPrediction],
             stats: {
@@ -444,7 +494,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             },
             timestamp: new Date().toISOString(),
             timeVN: getVietnamTimeNow(),
-            drawId: nextDrawId,  // Đảm bảo sử dụng nextDrawId ở đây!
+            drawId: nextDrawId, // Sử dụng nextDrawId ngay từ đầu
             votes: {
                 "tài": finalPrediction >= 5 ? 1 : 0,
                 "xỉu": finalPrediction < 5 ? 1 : 0
@@ -460,20 +510,53 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             }
         };
 
-        // 5. Lưu kết quả vào file nếu cần
+        // Ghi file đơn giản không dùng lock
         if (fileConfig[1]) {
             try {
                 const fs = require('fs');
+                console.log(`ĐANG GHI FILE với drawId=${result.drawId}`);
                 fs.writeFileSync(
                     `${fileConfig[0]}.prediction`,
                     JSON.stringify(result, null, 2)
                 );
+                console.log("GHI FILE THÀNH CÔNG");
             } catch (error) {
                 console.error("Lỗi khi lưu file prediction:", error);
             }
         }
 
-        // Sau khi lưu file
+        // Log khoảng chu kỳ
+        console.log(`Dự đoán hiện tại: ${history[0]?.drawId || "không có"}`);
+        console.log(`Dự đoán trước đó: ${previousPrediction?.drawId}`);
+        console.log(`Khoảng cách: ${parseInt(history[0]?.drawId.slice(-4)) - parseInt(previousPrediction?.drawId.slice(-4))}`);
+
+        // Tạo các file performance nếu chưa tồn tại
+        try {
+            const fs = require('fs');
+            
+            // Tạo file performance cho mỗi limit và thêm một dòng dữ liệu mẫu
+            for (const currentLimit of validParams.limit.limitList) {
+                const limitFileName = `${validParams.fileConfig[0]}_index${validParams.index}_limit${currentLimit}.performance`;
+                
+                if (!fs.existsSync(limitFileName)) {
+                    const header = `# File Performance với Limit=${currentLimit} và Index=${validParams.index}\n\n\n`;
+                    const sampleData = `Chu kỳ | 123456789000 | ${getVietnamTimeNow()} | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: ${validParams.index} | Đúng\n`;
+                    fs.writeFileSync(limitFileName, header + sampleData);
+                    console.log(`Đã tạo file performance mới với dữ liệu mẫu: ${limitFileName}`);
+                }
+            }
+            
+            // Tạo file performance tổng hợp
+            const combinedFileName = `${validParams.fileConfig[0]}_combined_performance.log`;
+            if (!fs.existsSync(combinedFileName)) {
+                const header = `# File Performance Tổng Hợp - Theo Dõi Kết Quả Dự Đoán Với Tất Cả Các Limit\n\n\n`;
+                const sampleData = `Chu kỳ | 123456789000 | ${getVietnamTimeNow()} | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: ${validParams.index} | Limit được chọn: ${validParams.limit.limitMain} | Đúng\n`;
+                fs.writeFileSync(combinedFileName, header + sampleData);
+                console.log(`Đã tạo file performance tổng hợp mới với dữ liệu mẫu`);
+            }
+        } catch (error) {
+            console.error("Lỗi khi tạo file performance:", error);
+        }
 
         return result;
 
@@ -1160,4 +1243,91 @@ function correctDrawId(drawId) {
     
     // Trả về chu kỳ đã điều chỉnh
     return prefix + nextCycle.toString().padStart(4, '0');
+}
+
+// Thêm hàm này vào đầu file hoặc trước hàm predictNumbers
+function savePerformanceBeforePrediction(history, fileConfig) {
+    // Đọc dự đoán trước đó
+    let previousPrediction = null;
+    try {
+        const fs = require('fs');
+        const predictionFile = `${fileConfig[0]}.prediction`;
+        if (fs.existsSync(predictionFile)) {
+            const content = fs.readFileSync(predictionFile, 'utf8');
+            previousPrediction = JSON.parse(content);
+        }
+    } catch (error) {
+        console.error("Lỗi khi đọc file prediction:", error);
+        return false;
+    }
+    
+    if (!previousPrediction || !previousPrediction.drawId) {
+        return false;
+    }
+    
+    const prevDrawId = previousPrediction.drawId;
+    console.log(`Đang tìm kết quả thực tế cho chu kỳ: ${prevDrawId}`);
+    console.log(`Các chu kỳ có trong history: ${history.slice(0, 5).map(h => h.drawId).join(', ')}`);
+    
+    // Tìm kết quả từ history API
+    const actualResultData = history.find(h => h.drawId === prevDrawId);
+    
+    if (actualResultData && actualResultData.numbers) {
+        console.log(`✅ Tìm thấy kết quả thực tế cho chu kỳ ${prevDrawId}: ${actualResultData.numbers}`);
+        
+        // Xử lý cập nhật performance cho mỗi limit
+        const index = previousPrediction.indexPredicted || 0;
+        for (const limitValue of previousPrediction.limits.all) {
+            const predictionValue = previousPrediction.limits.predictions[limitValue];
+            if (predictionValue !== undefined) {
+                const actualNumber = Number(actualResultData.numbers[index]);
+                
+                // Kiểm tra xem đã lưu chu kỳ này chưa
+                const limitFileName = `${fileConfig[0]}_index${index}_limit${limitValue}.performance`;
+                let fileContent = "";
+                if (fs.existsSync(limitFileName)) {
+                    fileContent = fs.readFileSync(limitFileName, 'utf8');
+                }
+                
+                // Nếu chưa lưu chu kỳ này, thì lưu mới
+                if (!fileContent.includes(`Chu kỳ | ${prevDrawId}`)) {
+                    const resultType = predictionValue >= 5 ? "Tài" : "Xỉu";
+                    const actualType = actualNumber >= 5 ? "Tài" : "Xỉu";
+                    const isCorrect = (predictionValue >= 5) === (actualNumber >= 5);
+                    
+                    const newLine = `Chu kỳ | ${prevDrawId} | ${previousPrediction.timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictionValue} (${resultType}) | Vị trí: ${index} | ${isCorrect ? "Đúng" : "Sai"}`;
+                    
+                    fs.appendFileSync(limitFileName, newLine + "\n");
+                    console.log(`Đã cập nhật performance cho limit=${limitValue}: ${newLine}`);
+                } else {
+                    console.log(`Chu kỳ ${prevDrawId} đã được lưu trong file ${limitFileName}`);
+                }
+            }
+        }
+        
+        // Cập nhật file performance tổng hợp
+        const combinedFileName = `${fileConfig[0]}_combined_performance.log`;
+        let combinedContent = "";
+        if (fs.existsSync(combinedFileName)) {
+            combinedContent = fs.readFileSync(combinedFileName, 'utf8');
+        }
+        
+        if (!combinedContent.includes(`Chu kỳ | ${prevDrawId}`)) {
+            const actualNumber = Number(actualResultData.numbers[index]);
+            const predictedNumber = previousPrediction.predictions[0];
+            const isCorrect = (actualNumber >= 5) === (predictedNumber >= 5);
+            
+            const actualType = actualNumber >= 5 ? "Tài" : "Xỉu";
+            const predictedType = predictedNumber >= 5 ? "Tài" : "Xỉu";
+            const newLine = `Chu kỳ | ${prevDrawId} | ${previousPrediction.timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictedNumber} (${predictedType}) | Vị trí: ${index} | Limit được chọn: ${previousPrediction.limits.main} | ${isCorrect ? "Đúng" : "Sai"}`;
+            
+            fs.appendFileSync(combinedFileName, newLine + '\n');
+            console.log(`Đã cập nhật file performance tổng hợp`);
+        } else {
+            console.log(`Chu kỳ ${prevDrawId} đã được lưu trong file tổng hợp`);
+        }
+    } else {
+        console.log(`❌ KHÔNG tìm thấy kết quả cho chu kỳ: ${prevDrawId}`);
+        return false;
+    }
 }

@@ -101,26 +101,20 @@ function updatePerformanceFile(fileConfig, index, limit, result, actualResult, d
  * Cập nhật hàm đánh giá hiệu suất limit
  */
 function evaluateLimitPerformance(limitPerformance) {
-    try {
-        // Đánh giá hiệu suất của các limit
-        const performanceEntries = Object.entries(limitPerformance);
-        
-        // Sắp xếp theo hiệu suất từ cao xuống thấp
-        const sortedLimits = performanceEntries.sort(([,a], [,b]) => b - a);
-        
-        // Loại bỏ các limit có hiệu suất quá thấp (dưới 40%)
-        const validLimits = sortedLimits.filter(([,accuracy]) => accuracy >= 0.4);
-        
-        // Nếu không có limit nào đạt ngưỡng, sử dụng limit có hiệu suất cao nhất
-        if (validLimits.length === 0 && sortedLimits.length > 0) {
-            return [sortedLimits[0]];
-        }
-        
-        return validLimits;
-    } catch (error) {
-        console.error("Lỗi khi đánh giá hiệu suất limit:", error);
+    const performanceEntries = Object.entries(limitPerformance);
+    
+    // Sắp xếp theo hiệu suất từ cao xuống thấp
+    const sortedLimits = performanceEntries.sort(([,a], [,b]) => b - a);
+    
+    // Chỉ chọn limit có hiệu suất > 50%
+    const validLimits = sortedLimits.filter(([,accuracy]) => accuracy >= 0.5);
+    
+    // Nếu không có limit nào đạt ngưỡng, giữ nguyên limitMain
+    if (validLimits.length === 0) {
         return [];
     }
+    
+    return validLimits;
 }
 
 /**
@@ -132,8 +126,77 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
         const limitPredictions = {};
         const limitPerformance = {};
         const strategies = [];
+        // Đọc dữ liệu performance để kiểm tra emergency correction
+        let performanceData = null;
+        try {
+            const fs = require('fs');
+            const combinedPerformanceFile = `${fileConfig[0]}_combined_performance.log`;
+            if (fs.existsSync(combinedPerformanceFile)) {
+                const content = fs.readFileSync(combinedPerformanceFile, 'utf8');
+                performanceData = { history: content.split('\n') };
+            }
+        } catch (error) {
+            console.error("Lỗi khi đọc file performance:", error);
+        }
+        
+        // Kiểm tra emergency correction
+        const emergencyPrediction = emergencyCorrection(performanceData);
+        if (emergencyPrediction !== null) {
+            strategies.push("Áp dụng biện pháp khẩn cấp do dự đoán sai liên tiếp");
+            
+            // Tạo dự đoán cho tất cả các limit
+            const emergencyPredictions = {};
+            for (const currentLimit of validParams.limit.limitList) {
+                // Tạo dự đoán khác nhau cho mỗi limit
+                if (currentLimit === validParams.limit.limitMain) {
+                    emergencyPredictions[currentLimit] = emergencyPrediction;
+                } else {
+                    const isXiu = emergencyPrediction < 5;
+                    emergencyPredictions[currentLimit] = isXiu ? 
+                        getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+                }
+            }
+            
+            // Tạo kết quả trả về với dự đoán từ limit tốt nhất
+            const result = {
+                predictions: [emergencyPredictions[validParams.limit.limitMain]],
+                stats: {
+                    accuracy: 0,
+                    consecutiveWrong: 0
+                },
+                timestamp: new Date().toISOString(),
+                timeVN: getVietnamTimeNow(),
+                drawId: history[0]?.drawId || "",
+                votes: {
+                    "tài": emergencyPredictions[validParams.limit.limitMain] >= 5 ? 1 : 0,
+                    "xỉu": emergencyPredictions[validParams.limit.limitMain] < 5 ? 1 : 0
+                },
+                strategies: strategies,
+                indexPredicted: validParams.index,
+                limits: {
+                    main: validParams.limit.limitMain,
+                    all: validParams.limit.limitList,
+                    predictions: emergencyPredictions
+                }
+            };
 
-        // Lấy kết quả thực tế từ lần dự đoán trước
+            // 5. Lưu kết quả vào file nếu cần
+            if (fileConfig[1]) {
+                try {
+                    const fs = require('fs');
+                    fs.writeFileSync(
+                        `${fileConfig[0]}.prediction`,
+                        JSON.stringify(result, null, 2)
+                    );
+                } catch (error) {
+                    console.error("Lỗi khi lưu file prediction:", error);
+                }
+            }
+
+            return result;
+        }
+
+        // Phần xử lý lấy kết quả thực tế từ lần dự đoán trước
         let previousPrediction = null;
         try {
             const fs = require('fs');
@@ -149,26 +212,47 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
         // Nếu có dự đoán trước, cập nhật performance
         if (previousPrediction && previousPrediction.drawId) {
             const prevDrawId = previousPrediction.drawId;
-            const actualResult = history.find(h => h.drawId === prevDrawId);
+            const actualResultData = history.find(h => h.drawId === prevDrawId);
             
-            if (actualResult && actualResult.numbers && actualResult.numbers[index] !== undefined) {
-                const actualNumber = Number(actualResult.numbers[index]);
+            if (actualResultData && actualResultData.numbers && actualResultData.numbers[index] !== undefined) {
+                const actualNumber = Number(actualResultData.numbers[index]);
                 
-                // Cập nhật performance cho mỗi limit
+                // Cập nhật performance cho từng limit riêng biệt
                 for (const limitValue of validParams.limit.limitList) {
-                    const prevPrediction = previousPrediction.limits.predictions[limitValue];
-                    if (prevPrediction !== undefined) {
+                    // Lấy dự đoán từ previousPrediction
+                    let predictionValue = null;
+                    if (previousPrediction.limits && previousPrediction.limits.predictions) {
+                        predictionValue = previousPrediction.limits.predictions[limitValue];
+                    }
+                    
+                    // Cập nhật file performance nếu có dự đoán
+                    if (predictionValue !== null && predictionValue !== undefined) {
                         updatePerformanceFile(
                             fileConfig,
                             index,
                             limitValue,
-                            prevPrediction,
+                            predictionValue,
                             actualNumber,
                             prevDrawId,
                             previousPrediction.timeVN
                         );
                     }
                 }
+                
+                // Cập nhật file performance tổng hợp
+                const usedLimit = previousPrediction.limits.main;
+                const predictedNumber = previousPrediction.predictions[0];
+                const isCorrect = (actualNumber >= 5) === (predictedNumber >= 5);
+                updateCombinedPerformanceFile(
+                    fileConfig,
+                    prevDrawId,
+                    previousPrediction.timeVN,
+                    actualNumber,
+                    predictedNumber,
+                    usedLimit,
+                    isCorrect,
+                    index
+                );
             }
         }
 
@@ -182,22 +266,62 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             
             const predictions = [
                 {
-                    number: predictBasedOnActualResults(limitedHistory, currentLimit, randomOffset),
-                weight: 25,
+                    number: predictBasedOnActualResults(limitedHistory, currentLimit),
+                    weight: 10,
                     confidence: 0.8,
                     description: `Dự đoán cơ bản (limit ${currentLimit})`
                 },
                 {
                     number: analyzeTrend(limitedHistory, currentLimit, randomOffset),
-                    weight: 30,
+                    weight: 10,
                     confidence: 0.85,
                     description: `Phân tích xu hướng (limit ${currentLimit})`
                 },
                 {
                     number: analyzeRecentResults(limitedHistory, Math.min(5, currentLimit), randomOffset),
-                    weight: 35,
-                    confidence: 0.9,
+                    weight: 10,
+                    confidence: 0.85,
                     description: `Phân tích gần đây (limit ${currentLimit})`
+                },
+                {
+                    number: patternRecognitionPredictor(limitedHistory, Math.min(3, currentLimit)),
+                    weight: 10,
+                    confidence: 0.9,
+                    description: `Phân tích mẫu số (limit ${currentLimit})`
+                },
+                {
+                    number: analyzeNumberCycles(limitedHistory, Math.min(10, currentLimit)),
+                    weight: 10,
+                    confidence: 0.9,
+                    description: `Phân tích chu kỳ số (limit ${currentLimit})`
+                },
+                {
+                    number: statisticalAnalysisPredictor(limitedHistory, Math.min(20, currentLimit)),
+                    weight: 15,
+                    confidence: 0.92,
+                    description: `Phân tích thống kê nâng cao (limit ${currentLimit})`
+                },
+                {
+                    number: reinforcementLearningPredictor(limitedHistory, { 
+                        history: getPerformanceHistory(fileConfig, index, currentLimit) 
+                    }),
+                    weight: 15,
+                    confidence: 0.95,
+                    description: `Học tăng cường (limit ${currentLimit})`
+                },
+                {
+                    number: adaptiveLearning(limitedHistory, 
+                        limitedHistory.map(item => Number(item.numbers?.[0])).filter(n => !isNaN(n)), 
+                        Math.min(10, currentLimit)),
+                    weight: 15,
+                    confidence: 0.93,
+                    description: `Học thích ứng (limit ${currentLimit})`
+                },
+                {
+                    number: analyzeLimitedHistory(limitedHistory, index).finalNumber,
+                    weight: 20,
+                    confidence: 0.95,
+                    description: `Phân tích tổng hợp (limit ${currentLimit})`
                 }
             ].filter(p => p.number !== null && !isNaN(p.number));
 
@@ -264,6 +388,20 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             strategies.push(`Sử dụng kết quả từ limitMain=${originalLimitMain} (không có limit hiệu quả)`);
         }
         
+        // Thay đổi logic trong predict.js
+        // Khi lấy drawId hiện tại, tính ngay drawId cho chu kỳ TIẾP THEO
+        const currentDrawId = history[0]?.drawId || "";
+        let nextDrawId = "";
+
+        if (currentDrawId && currentDrawId.length === 12) {
+            // Tính chu kỳ tiếp theo
+            const numPart = parseInt(currentDrawId.slice(-4)) + 1;
+            nextDrawId = currentDrawId.slice(0, 8) + numPart.toString().padStart(4, '0');
+            
+            // Log để kiểm tra
+            console.log(`Đang dự đoán cho chu kỳ tiếp theo: ${nextDrawId} (hiện tại: ${currentDrawId})`);
+        }
+
         // Tạo kết quả trả về với dự đoán từ limit tốt nhất
         const result = {
             predictions: [finalPrediction],
@@ -273,7 +411,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             },
             timestamp: new Date().toISOString(),
             timeVN: getVietnamTimeNow(),
-            drawId: history[0]?.drawId || "",
+            drawId: nextDrawId,
             votes: {
                 "tài": finalPrediction >= 5 ? 1 : 0,
                 "xỉu": finalPrediction < 5 ? 1 : 0
@@ -505,7 +643,10 @@ function getVietnamTimeNow(log = false) {
  * Trả về số ngẫu nhiên trong khoảng
  */
 function getLuckyNumberInRange(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    // Thêm entropy từ timestamp để tăng tính ngẫu nhiên
+    const timestamp = new Date().getTime();
+    const seed = timestamp % 1000;
+    return min + Math.floor((seed / 1000) * (max - min + 1));
 }
 
 /**
@@ -635,7 +776,7 @@ function getNumberFromHistory(item, index = 0) {
 /**
  * Dự đoán dựa trên số thực tế gần đây
  */
-function predictBasedOnActualResults(history, limit, offset = 0) {
+function predictBasedOnActualResults(history, limit) {
     if (!Array.isArray(history) || history.length === 0) {
         return getLuckyNumberInRange(0, 9);
     }
@@ -650,7 +791,23 @@ function predictBasedOnActualResults(history, limit, offset = 0) {
         return getLuckyNumberInRange(0, 9);
     }
 
-    // Kiểm tra xu hướng hiện tại
+    // Phân tích chuỗi số liên tục
+    let increasing = 0, decreasing = 0;
+    for (let i = 0; i < recentResults.length - 1; i++) {
+        if (recentResults[i] < recentResults[i+1]) increasing++;
+        if (recentResults[i] > recentResults[i+1]) decreasing++;
+    }
+    
+    // Xác định xu hướng
+    if (increasing > decreasing + 2) {
+        // Xu hướng tăng rõ rệt
+        return getLuckyNumberInRange(5, 9); // Dự đoán Tài do xu hướng tăng
+    } else if (decreasing > increasing + 2) {
+        // Xu hướng giảm rõ rệt
+        return getLuckyNumberInRange(0, 4); // Dự đoán Xỉu do xu hướng giảm
+    }
+
+    // Kiểm tra xu hướng Tài/Xỉu
     const taiCount = recentResults.filter(num => num >= 5).length;
     const xiuCount = recentResults.length - taiCount;
     
@@ -658,11 +815,11 @@ function predictBasedOnActualResults(history, limit, offset = 0) {
     const taiRatio = taiCount / recentResults.length;
     
     if (taiRatio >= 0.7) {
-        // Xu hướng mạnh về Tài
-        return Math.random() < 0.8 ? getLuckyNumberInRange(5, 9) : getLuckyNumberInRange(0, 4);
+        // Xu hướng mạnh về Tài - dự đoán Tài
+        return getLuckyNumberInRange(5, 9);
     } else if (taiRatio <= 0.3) {
-        // Xu hướng mạnh về Xỉu
-        return Math.random() < 0.8 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+        // Xu hướng mạnh về Xỉu - dự đoán Xỉu
+        return getLuckyNumberInRange(0, 4);
     }
     
     // Nếu không có xu hướng rõ ràng
@@ -826,8 +983,8 @@ function ensemblePredictor(predictions, offset = 0) {
         return getLuckyNumberInRange(0, 9);
     }
 
-    // Sử dụng offset để tạo nhiễu khác nhau cho mỗi limit
-    const noise = (Math.sin(offset * Math.PI * 2) * 2 - 1) * 2;
+    // Thay đổi công thức tính noise
+    const noise = (Math.cos(offset * Math.PI) * 0.5); // Giảm ảnh hưởng của noise
     const finalNumber = Math.round(weightedSum / totalWeight + noise);
     
     return Math.max(0, Math.min(9, finalNumber));
@@ -896,4 +1053,46 @@ function analyzeNumberCycles(history, length = 10) {
     }
 
     return prediction;
+}
+
+function updateCombinedPerformanceFile(fileConfig, drawId, timeVN, actualNum, predictedNum, limitUsed, wasCorrect, index = 0) {
+    try {
+        const fs = require('fs');
+        const fileName = `${fileConfig[0]}_combined_performance.log`;
+        
+        // Xác định kiểu Tài/Xỉu
+        const actualType = actualNum >= 5 ? "Tài" : "Xỉu";
+        const predictedType = predictedNum >= 5 ? "Tài" : "Xỉu";
+        
+        // Tạo dòng kết quả mới với thông tin về index
+        const newLine = `Chu kỳ | ${drawId} | ${timeVN} | Số thực tế: ${actualNum} (${actualType}) | Số dự đoán: ${predictedNum} (${predictedType}) | Vị trí: ${index} | Limit được chọn: ${limitUsed} | ${wasCorrect ? "Đúng" : "Sai"}`;
+        
+        // Tạo hoặc cập nhật file
+        if (!fs.existsSync(fileName)) {
+            const header = `# File Performance Tổng Hợp - Theo Dõi Kết Quả Dự Đoán Với Tất Cả Các Limit\n\n\n`;
+            fs.writeFileSync(fileName, header + newLine + '\n');
+        } else {
+            fs.appendFileSync(fileName, newLine + '\n');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error(`Lỗi khi cập nhật file performance tổng hợp:`, error);
+        return false;
+    }
+}
+
+// Thêm hàm này để lấy dữ liệu hiệu suất
+function getPerformanceHistory(fileConfig, index, limit) {
+    try {
+        const fs = require('fs');
+        const fileName = `${fileConfig[0]}_index${index}_limit${limit}.performance`;
+        if (fs.existsSync(fileName)) {
+            const content = fs.readFileSync(fileName, 'utf8');
+            return content.split('\n');
+        }
+        return [];
+    } catch (error) {
+        return [];
+    }
 }

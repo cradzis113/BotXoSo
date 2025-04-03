@@ -193,6 +193,28 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                 }
             }
 
+            // Lấy drawId hiện tại từ phần tử đầu tiên của history
+            const currentDrawId = history[0]?.drawId || "";
+
+            // Tính drawId tiếp theo (+1)
+            let nextDrawId = "";
+            if (currentDrawId && currentDrawId.length === 12) {
+                const prefix = currentDrawId.slice(0, 8);  // Lấy phần YYYYMMDD
+                const numPart = parseInt(currentDrawId.slice(-4));  // Lấy phần số chu kỳ
+                
+                // Tính chu kỳ tiếp theo (đơn giản chỉ +1)
+                const nextCycle = numPart + 1;
+                
+                // Tạo drawId mới
+                nextDrawId = prefix + nextCycle.toString().padStart(4, '0');
+                
+            } else {
+                nextDrawId = currentDrawId;
+            }
+
+            // Sử dụng nextDrawId trong kết quả
+            result.drawId = nextDrawId;
+
             return result;
         }
 
@@ -202,16 +224,19 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             const fs = require('fs');
             const predictionFile = `${fileConfig[0]}.prediction`;
             if (fs.existsSync(predictionFile)) {
-                const predictionData = JSON.parse(fs.readFileSync(predictionFile, 'utf8'));
-                previousPrediction = predictionData;
+                const content = fs.readFileSync(predictionFile, 'utf8');
+                previousPrediction = JSON.parse(content);
+                if (log) console.log("Đã đọc dự đoán trước đó:", previousPrediction.drawId);
             }
         } catch (error) {
-            console.error("Lỗi khi đọc file prediction trước:", error);
+            console.error("Lỗi khi đọc file prediction:", error);
         }
 
         // Nếu có dự đoán trước, cập nhật performance
         if (previousPrediction && previousPrediction.drawId) {
             const prevDrawId = previousPrediction.drawId;
+            
+            // Tìm kết quả trong history
             const actualResultData = history.find(h => h.drawId === prevDrawId);
             
             if (actualResultData && actualResultData.numbers && actualResultData.numbers[index] !== undefined) {
@@ -227,6 +252,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                     
                     // Cập nhật file performance nếu có dự đoán
                     if (predictionValue !== null && predictionValue !== undefined) {
+                        if (log) console.log(`Cập nhật performance cho limit=${limitValue}, dự đoán=${predictionValue}, thực tế=${actualNumber}`);
                         updatePerformanceFile(
                             fileConfig,
                             index,
@@ -243,6 +269,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                 const usedLimit = previousPrediction.limits.main;
                 const predictedNumber = previousPrediction.predictions[0];
                 const isCorrect = (actualNumber >= 5) === (predictedNumber >= 5);
+                if (log) console.log(`Cập nhật performance tổng hợp: dự đoán=${predictedNumber}, thực tế=${actualNumber}, đúng=${isCorrect}`);
                 updateCombinedPerformanceFile(
                     fileConfig,
                     prevDrawId,
@@ -253,6 +280,9 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                     isCorrect,
                     index
                 );
+            } else if (log) {
+                console.log(`Không tìm thấy kết quả thực tế cho chu kỳ: ${prevDrawId}`);
+                console.log(`Các chu kỳ hiện có:`, history.slice(0, 5).map(h => h.drawId).join(', '));
             }
         }
 
@@ -388,21 +418,24 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             strategies.push(`Sử dụng kết quả từ limitMain=${originalLimitMain} (không có limit hiệu quả)`);
         }
         
-        // Thay đổi logic trong predict.js
-        // Khi lấy drawId hiện tại, tính ngay drawId cho chu kỳ TIẾP THEO
-        const currentDrawId = history[0]?.drawId || "";
+        // Đảm bảo đặt đoạn code tính nextDrawId TRƯỚC khi tạo result object
         let nextDrawId = "";
-
-        if (currentDrawId && currentDrawId.length === 12) {
-            // Tính chu kỳ tiếp theo
-            const numPart = parseInt(currentDrawId.slice(-4)) + 1;
-            nextDrawId = currentDrawId.slice(0, 8) + numPart.toString().padStart(4, '0');
+        if (history[0]?.drawId && history[0].drawId.length === 12) {
+            const prefix = history[0].drawId.slice(0, 8);
+            const numPart = parseInt(history[0].drawId.slice(-4));
             
-            // Log để kiểm tra
-            console.log(`Đang dự đoán cho chu kỳ tiếp theo: ${nextDrawId} (hiện tại: ${currentDrawId})`);
+            // Tính chu kỳ tiếp theo (+1)
+            const nextCycle = numPart + 1;
+            
+            nextDrawId = prefix + nextCycle.toString().padStart(4, '0');
+            console.log(`Dự đoán cho chu kỳ tiếp theo: ${nextDrawId} (hiện tại: ${history[0].drawId})`);
+        } else {
+            nextDrawId = history[0]?.drawId || "";
         }
 
-        // Tạo kết quả trả về với dự đoán từ limit tốt nhất
+        // Kiểm tra xem nextDrawId có được sử dụng đúng không
+
+        // 2. Trực tiếp sử dụng nextDrawId khi tạo result
         const result = {
             predictions: [finalPrediction],
             stats: {
@@ -411,7 +444,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             },
             timestamp: new Date().toISOString(),
             timeVN: getVietnamTimeNow(),
-            drawId: nextDrawId,
+            drawId: nextDrawId,  // Đảm bảo sử dụng nextDrawId ở đây!
             votes: {
                 "tài": finalPrediction >= 5 ? 1 : 0,
                 "xỉu": finalPrediction < 5 ? 1 : 0
@@ -439,6 +472,8 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                 console.error("Lỗi khi lưu file prediction:", error);
             }
         }
+
+        // Sau khi lưu file
 
         return result;
 
@@ -1095,4 +1130,34 @@ function getPerformanceHistory(fileConfig, index, limit) {
     } catch (error) {
         return [];
     }
+}
+
+// Tạo hàm lấy mã chu kỳ hiện tại từ thời gian thực
+function getCurrentCycleId() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  
+  // Tính chu kỳ dựa vào giây trong ngày (giả sử mỗi chu kỳ 45 giây)
+  const secondsInDay = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const currentCycle = Math.floor(secondsInDay / 45) + 1;
+  
+  return `${year}${month}${day}${currentCycle.toString().padStart(4, '0')}`;
+}
+
+// Thêm hàm kiểm tra và điều chỉnh drawId
+function correctDrawId(drawId) {
+    // Lấy chu kỳ hiện tại từ web (giả sử bạn có thể lấy được)
+    const webCurrentCycle = getWebCurrentCycle(); // Hàm này cần được triển khai
+    
+    // Tách phần số từ drawId
+    const prefix = drawId.slice(0, 8);
+    const numPart = parseInt(drawId.slice(-4));
+    
+    // Tính chu kỳ tiếp theo từ chu kỳ web hiện tại
+    const nextCycle = webCurrentCycle + 1;
+    
+    // Trả về chu kỳ đã điều chỉnh
+    return prefix + nextCycle.toString().padStart(4, '0');
 }

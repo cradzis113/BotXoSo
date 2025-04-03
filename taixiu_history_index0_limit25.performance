@@ -1,8 +1,8 @@
-# File Performance với Limit=5 và Index=0
+# File Performance với Limit=25 và Index=0
 
 
 Chu kỳ | 202504030384 | 03/04/2025 11:47:31 AM | Số thực tế: 8 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504030385 | 03/04/2025 11:48:17 AM | Số thực tế: 3 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504030385 | 03/04/2025 11:48:17 AM | Số thực tế: 3 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
 Chu kỳ | 202504030386 | 03/04/2025 11:49:01 AM | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504030387 | 03/04/2025 11:49:48 AM | Số thực tế: 4 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504030387 | 03/04/2025 11:49:48 AM | Số thực tế: 4 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
 Chu kỳ | 202504030388 | 03/04/2025 11:52:10 AM | Số thực tế: 0 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai

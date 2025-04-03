@@ -60,7 +60,7 @@ async function watchCountdown() {
         hasPredicted = true;  // Set flag to true after prediction
         try {
           const history = await getLotteryNumbers()
-          const arrays = await predictNumbers(history, 0, { limitList: [5, 10, 15], limitMain: 15 }, ["taixiu_history", true], false);
+          const arrays = await predictNumbers(history, 0, { limitList: [5, 10, 15, 20, 25], limitMain: 15 }, ["taixiu_history", true], false);
           console.log(arrays.predictions)
 
         } catch (error) {

@@ -1,0 +1,40 @@
+{
+  "predictions": [
+    2
+  ],
+  "stats": {
+    "accuracy": 0.5,
+    "consecutiveWrong": 0
+  },
+  "timestamp": "2025-04-03T15:56:33.023Z",
+  "timeVN": "03/04/2025 10:56:33 PM",
+  "drawId": "202504031276",
+  "votes": {
+    "tài": 0,
+    "xỉu": 1
+  },
+  "strategies": [
+    "Sử dụng kết quả từ limit=5 (hiệu suất: 50.0%)",
+    "Đã thay đổi limitMain từ 15 sang 5 do hiệu suất tốt hơn"
+  ],
+  "indexPredicted": 0,
+  "limits": {
+    "main": 5,
+    "originalMain": 15,
+    "effective": [
+      5,
+      10,
+      15
+    ],
+    "all": [
+      5,
+      10,
+      15
+    ],
+    "predictions": {
+      "5": 2,
+      "10": 1,
+      "15": 2
+    }
+  }
+}

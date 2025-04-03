@@ -232,37 +232,37 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
             const predictions = [
                 {
                     number: predictBasedOnActualResults(limitedHistory, currentLimit),
-                    weight: 10,
+                    weight: 5,  // Giảm trọng số xuống
                     confidence: 0.8,
                     description: `Dự đoán cơ bản (limit ${currentLimit})`
                 },
                 {
                     number: analyzeTrend(limitedHistory, currentLimit, randomOffset),
-                    weight: 10,
+                    weight: 5,  // Giảm trọng số xuống
                     confidence: 0.85,
                     description: `Phân tích xu hướng (limit ${currentLimit})`
                 },
                 {
                     number: analyzeRecentResults(limitedHistory, Math.min(5, currentLimit), randomOffset),
-                    weight: 10,
+                    weight: 5,  // Giảm trọng số xuống
                     confidence: 0.85,
                     description: `Phân tích gần đây (limit ${currentLimit})`
                 },
                 {
                     number: patternRecognitionPredictor(limitedHistory, Math.min(3, currentLimit)),
-                    weight: 10,
+                    weight: 5,  // Giảm trọng số xuống
                     confidence: 0.9,
                     description: `Phân tích mẫu số (limit ${currentLimit})`
                 },
                 {
                     number: analyzeNumberCycles(limitedHistory, Math.min(10, currentLimit)),
-                    weight: 10,
+                    weight: 5,  // Giảm trọng số xuống
                     confidence: 0.9,
                     description: `Phân tích chu kỳ số (limit ${currentLimit})`
                 },
                 {
                     number: statisticalAnalysisPredictor(limitedHistory, Math.min(20, currentLimit)),
-                    weight: 15,
+                    weight: 10,  // Giảm trọng số xuống
                     confidence: 0.92,
                     description: `Phân tích thống kê nâng cao (limit ${currentLimit})`
                 },
@@ -270,7 +270,7 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                     number: reinforcementLearningPredictor(limitedHistory, { 
                         history: getPerformanceHistory(fileConfig, index, currentLimit) 
                     }),
-                    weight: 15,
+                    weight: 10,  // Giảm trọng số xuống
                     confidence: 0.95,
                     description: `Học tăng cường (limit ${currentLimit})`
                 },
@@ -278,15 +278,125 @@ async function predictNumbers(history, index = 0, limit = {limitList: [5, 10, 15
                     number: adaptiveLearning(limitedHistory, 
                         limitedHistory.map(item => Number(item.numbers?.[0])).filter(n => !isNaN(n)), 
                         Math.min(10, currentLimit)),
-                    weight: 15,
+                    weight: 10,  // Giảm trọng số xuống
                     confidence: 0.93,
                     description: `Học thích ứng (limit ${currentLimit})`
                 },
                 {
                     number: analyzeLimitedHistory(limitedHistory, index).finalNumber,
-                    weight: 20,
+                    weight: 10,  // Giảm trọng số xuống
                     confidence: 0.95,
                     description: `Phân tích tổng hợp (limit ${currentLimit})`
+                },
+                
+                // Thêm các mô hình mới với trọng số cao hơn
+                {
+                    number: trendReversalPredictor(limitedHistory, index),
+                    weight: 25,  // Trọng số cao
+                    confidence: 0.96,
+                    description: `Dự đoán đảo chiều xu hướng (limit ${currentLimit})`
+                },
+                {
+                    number: adaptiveWeightPredictor(history, index, getPerformanceHistory(fileConfig, index, currentLimit)),
+                    weight: 30,  // Trọng số cao nhất
+                    confidence: 0.97,
+                    description: `Dự đoán trọng số động (limit ${currentLimit})`
+                },
+                {
+                    number: dynamicPerformancePredictor(history, index, fileConfig, { 
+                        limitList: currentLimit ? [5, 10, 15, currentLimit] : [5, 10, 15],
+                        limitMain: currentLimit || 15
+                    }),
+                    weight: 30,
+                    confidence: 0.96,
+                    description: `Dự đoán theo hiệu suất động (limit ${currentLimit})`
+                },
+                // Thêm vào mảng predictions với trọng số cao nhất
+                {
+                    number: analyzeRealPatterns(index),
+                    weight: 40,  // Trọng số cao nhất
+                    confidence: 0.98,
+                    description: `Phân tích mẫu kết quả thực tế`
+                },
+                {
+                    number: alternatingPatternPredictor(history, index),
+                    weight: 30,
+                    confidence: 0.95,
+                    description: 'Dự đoán theo mẫu xen kẽ'
+                },
+                {
+                    number: alternatingPatternPredictor(history, index),
+                    weight: 40,
+                    confidence: 0.98,
+                    description: 'Dự đoán theo mẫu xen kẽ thực tế'
+                },
+                {
+                    number: anomalyFilterPredictor(history, index),
+                    weight: 15,
+                    confidence: 0.92,
+                    description: `Lọc dữ liệu bất thường (limit ${currentLimit})`
+                },
+                {
+                    number: markovChainPredictor(history, index),
+                    weight: 20,
+                    confidence: 0.93,
+                    description: `Dự đoán chuỗi Markov (limit ${currentLimit})`
+                },
+                {
+                    number: analyzeTrendDirection(limitedHistory.map(item => {
+                        if (!item || !item.numbers || !item.numbers[index]) return null;
+                        return Number(item.numbers[index]);
+                    }).filter(n => n !== null && !isNaN(n))),
+                    weight: 15,
+                    confidence: 0.91,
+                    description: `Phân tích hướng xu hướng (limit ${currentLimit})`
+                },
+                {
+                    number: detectNumberPattern(limitedHistory.map(item => {
+                        if (!item || !item.numbers || !item.numbers[index]) return null;
+                        return Number(item.numbers[index]);
+                    }).filter(n => n !== null && !isNaN(n))),
+                    weight: 20,
+                    confidence: 0.92,
+                    description: `Nhận diện mẫu số (limit ${currentLimit})`
+                },
+                {
+                    number: numberFrequencyAnalysis(limitedHistory.map(item => {
+                        if (!item || !item.numbers || !item.numbers[index]) return null;
+                        return Number(item.numbers[index]);
+                    }).filter(n => n !== null && !isNaN(n))),
+                    weight: 15,
+                    confidence: 0.91,
+                    description: `Phân tích tần suất (limit ${currentLimit})`
+                },
+                {
+                    number: balancePredictor(limitedHistory.map(item => {
+                        if (!item || !item.numbers || !item.numbers[index]) return null;
+                        return Number(item.numbers[index]);
+                    }).filter(n => n !== null && !isNaN(n))),
+                    weight: 25,
+                    confidence: 0.94,
+                    description: `Dự đoán cân bằng (limit ${currentLimit})`
+                },
+                
+                // Thêm các hàm mới với trọng số cao
+                {
+                    number: trendReversalPredictor(history, index),
+                    weight: 30,
+                    confidence: 0.95,
+                    description: `Dự đoán đảo chiều xu hướng (limit ${currentLimit})`
+                },
+                {
+                    number: adaptiveWeightPredictor(history, index, getPerformanceHistory(fileConfig, index, currentLimit)),
+                    weight: 30,
+                    confidence: 0.95,
+                    description: `Dự đoán trọng số động (limit ${currentLimit})`
+                },
+                {
+                    number: alternatingPatternPredictor(history, index),
+                    weight: 35,
+                    confidence: 0.97,
+                    description: `Dự đoán mẫu xen kẽ (limit ${currentLimit})`
                 }
             ].filter(p => p.number !== null && !isNaN(p.number));
 
@@ -1044,6 +1154,715 @@ function getPerformanceHistory(fileConfig, index, limit) {
         return [];
     } catch (error) {
         return [];
+    }
+}
+
+/**
+ * Dự đoán phân tích xu hướng đảo chiều
+ */
+function trendReversalPredictor(history, index = 0) {
+    if (!history || history.length < 3) return null;
+    
+    // Lấy kết quả THỰC TẾ gần nhất từ file performance
+    const fs = require('fs');
+    const realResults = [];
+    
+    try {
+        const performanceFile = `taixiu_history_index${index}_limit15.performance`;
+        if (fs.existsSync(performanceFile)) {
+            const content = fs.readFileSync(performanceFile, 'utf8');
+            const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+            
+            // Lấy 10 kết quả thực tế gần nhất
+            const recentResults = lines.slice(-10);
+            for (const line of recentResults) {
+                const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+                if (match) {
+                    realResults.push(match[1] >= 5 ? 'T' : 'X');
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Lỗi khi đọc file performance:", error);
+    }
+    
+    // Nếu có ít nhất 5 kết quả thực tế, phân tích chúng
+    if (realResults.length >= 5) {
+        console.log("Phân tích dựa trên kết quả thực tế:", realResults.join(''));
+        
+        // Đếm chuỗi Tài/Xỉu liên tiếp
+        let currentStreak = 1;
+        let streakType = realResults[0];
+        
+        for (let i = 1; i < realResults.length; i++) {
+            if (realResults[i] === streakType) {
+                currentStreak++;
+            } else {
+                currentStreak = 1;
+                streakType = realResults[i];
+            }
+            
+            // Nếu có chuỗi >=3 kết quả giống nhau, dự đoán ngược lại
+            if (currentStreak >= 3) {
+                return streakType === 'T' ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+            }
+        }
+        
+        // Phân tích tỷ lệ Tài/Xỉu trong 5 kết quả gần nhất
+        const recentFive = realResults.slice(0, 5);
+        const taiCount = recentFive.filter(r => r === 'T').length;
+        
+        // Nếu Tài chiếm ưu thế, dự đoán Xỉu và ngược lại
+        if (taiCount >= 3) {
+            return getLuckyNumberInRange(0, 4); // Dự đoán Xỉu
+        } else {
+            return getLuckyNumberInRange(5, 9); // Dự đoán Tài
+        }
+    }
+    
+    // Nếu không có đủ dữ liệu thực tế, dùng phương pháp phân tích lịch sử
+    const recentNumbers = history.slice(0, Math.min(6, history.length))
+        .map(item => {
+            if (!item || !item.numbers || !item.numbers[index]) return null;
+            return Number(item.numbers[index]);
+        })
+        .filter(num => num !== null && !isNaN(num));
+    
+    // Phân tích chuỗi Tài/Xỉu
+    const pattern = recentNumbers.map(n => n >= 5 ? 'T' : 'X').join('');
+    console.log("Phân tích dựa trên lịch sử:", pattern);
+    
+    // Quy tắc đảo chiều sau 2 kết quả giống nhau
+    if (pattern.startsWith('TT')) return getLuckyNumberInRange(0, 4); // Sau 2 Tài, dự đoán Xỉu
+    if (pattern.startsWith('XX')) return getLuckyNumberInRange(5, 9); // Sau 2 Xỉu, dự đoán Tài
+    
+    // Nếu có xen kẽ, dự đoán theo kết quả gần nhất
+    return recentNumbers[0] >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+}
+
+/**
+ * Dự đoán dựa trên limit cụ thể
+ */
+function predictWithLimit(history, index, limit) {
+    // Lấy n phần tử đầu tiên của history dựa vào limit
+    const limitedHistory = history.slice(0, limit);
+    
+    // Thực hiện dự đoán dựa trên limitedHistory
+    return trendReversalPredictor(limitedHistory, index);
+}
+
+/**
+ * Mô hình kiểm tra hiệu suất động
+ */
+function dynamicPerformancePredictor(history, index = 0, fileConfig, limitConfig) {
+    try {
+        const fs = require('fs');
+        const limitPerformance = {};
+        const limitPredictions = {};
+        
+        // Kiểm tra dữ liệu performance
+        let hasEnoughData = false;
+        
+        // Lấy danh sách limit từ cấu hình
+        const limitList = limitConfig && limitConfig.limitList ? limitConfig.limitList : [15];
+        const limitMain = limitConfig && limitConfig.limitMain ? limitConfig.limitMain : 15;
+        
+        // Đọc hiệu suất của các model limit khác nhau
+        for (const limit of limitList) {
+            const fileName = `${fileConfig[0]}_index${index}_limit${limit}.performance`;
+            if (fs.existsSync(fileName)) {
+                const content = fs.readFileSync(fileName, 'utf8');
+                const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+                
+                if (lines.length > 0) {
+                    // Lấy 10 kết quả gần nhất hoặc tất cả nếu ít hơn 10
+                    const recent = lines.slice(-Math.min(10, lines.length));
+                    const correctCount = recent.filter(line => line.includes('| Đúng')).length;
+                    limitPerformance[limit] = correctCount / recent.length;
+                    
+                    // Tạo dự đoán cho limit này
+                    limitPredictions[limit] = predictWithLimit(history, index, limit);
+                    
+                    if (lines.length >= 5) {
+                        hasEnoughData = true;
+                    }
+                }
+            }
+        }
+        
+        // Nếu không có đủ dữ liệu, dùng phân tích trực tiếp
+        if (!hasEnoughData) {
+            console.log("Chưa đủ dữ liệu performance, dùng dự đoán xu hướng đảo chiều");
+            return trendReversalPredictor(history, index);
+        }
+        
+        // Chọn limit có hiệu suất tốt nhất
+        let bestLimit = limitMain; // Mặc định từ cấu hình
+        let bestPerformance = 0;
+        
+        for (const [limit, performance] of Object.entries(limitPerformance)) {
+            if (performance > bestPerformance) {
+                bestPerformance = performance;
+                bestLimit = parseInt(limit);
+            }
+        }
+        
+        console.log(`Limit hiệu quả nhất: ${bestLimit} (${(bestPerformance*100).toFixed(1)}%)`);
+        
+        // Nếu tất cả limit đều có hiệu suất thấp, dùng chiến lược ngược lại
+        if (bestPerformance < 0.4 && hasEnoughData) {
+            // Nếu tất cả đều dự đoán kém, làm ngược lại 
+            if (limitPredictions[bestLimit] >= 5) {
+                return getLuckyNumberInRange(0, 4); // Nếu dự đoán Tài, chọn Xỉu
+            } else {
+                return getLuckyNumberInRange(5, 9); // Nếu dự đoán Xỉu, chọn Tài
+            }
+        }
+        
+        // Sử dụng dự đoán của limit tốt nhất
+        return limitPredictions[bestLimit];
+    } catch (error) {
+        console.error("Lỗi khi dự đoán theo hiệu suất động:", error);
+        return getLuckyNumberInRange(0, 9);
+    }
+}
+
+/**
+ * Mô hình học máy trọng số động
+ */
+function adaptiveWeightPredictor(history, index = 0, performanceData) {
+    // Khởi tạo trọng số cho các chiến lược
+    const weights = {
+        trend: 0.25,        // Trọng số cho chiến lược xu hướng
+        pattern: 0.25,      // Trọng số cho chiến lược mẫu
+        frequency: 0.25,    // Trọng số cho chiến lược tần suất
+        balance: 0.25       // Trọng số cho chiến lược cân bằng
+    };
+    
+    const recentNumbers = history.slice(0, Math.min(10, history.length))
+        .map(item => {
+            if (!item || !item.numbers || !item.numbers[index]) return null;
+            return Number(item.numbers[index]);
+        })
+        .filter(num => num !== null && !isNaN(num));
+    
+    if (recentNumbers.length < 5) return getLuckyNumberInRange(0, 9);
+    
+    // Phân tích xu hướng
+    let trendPrediction = -1;
+    // Phân tích xu hướng tăng/giảm
+    let increasing = 0, decreasing = 0;
+    for (let i = 0; i < recentNumbers.length - 1; i++) {
+        if (recentNumbers[i] < recentNumbers[i+1]) increasing++;
+        if (recentNumbers[i] > recentNumbers[i+1]) decreasing++;
+    }
+    
+    // Xác định xu hướng
+    if (increasing > decreasing + 1) {
+        // Xu hướng tăng rõ rệt
+        trendPrediction = getLuckyNumberInRange(5, 9); // Dự đoán Tài
+    } else if (decreasing > increasing + 1) {
+        // Xu hướng giảm rõ rệt
+        trendPrediction = getLuckyNumberInRange(0, 4); // Dự đoán Xỉu
+    } else {
+        trendPrediction = recentNumbers[0] >= 5 ? 
+            getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+    }
+    
+    // Phát hiện mẫu
+    let patternPrediction = -1;
+    const pattern = recentNumbers.map(n => n >= 5 ? 'T' : 'X').join('');
+    
+    // Kiểm tra các mẫu đặc biệt
+    if (pattern.startsWith('TTT')) {
+        patternPrediction = getLuckyNumberInRange(0, 4); // Sau 3 Tài liên tiếp thường là Xỉu
+    } else if (pattern.startsWith('XXX')) {
+        patternPrediction = getLuckyNumberInRange(5, 9); // Sau 3 Xỉu liên tiếp thường là Tài
+    } else if (pattern.startsWith('TXTX')) {
+        patternPrediction = getLuckyNumberInRange(5, 9); // Sau mẫu TXTX thường là Tài
+    } else if (pattern.startsWith('XTXT')) {
+        patternPrediction = getLuckyNumberInRange(0, 4); // Sau mẫu XTXT thường là Xỉu
+    } else {
+        patternPrediction = Math.random() < 0.5 ? 
+            getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+    }
+    
+    // Phân tích tần suất
+    let frequencyPrediction = -1;
+    const taiCount = recentNumbers.filter(n => n >= 5).length;
+    const taiRatio = taiCount / recentNumbers.length;
+    
+    if (taiRatio > 0.7) {
+        frequencyPrediction = getLuckyNumberInRange(0, 4); // Quá nhiều Tài, dự đoán Xỉu
+    } else if (taiRatio < 0.3) {
+        frequencyPrediction = getLuckyNumberInRange(5, 9); // Quá nhiều Xỉu, dự đoán Tài
+    } else {
+        frequencyPrediction = Math.random() < 0.5 ? 
+            getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+    }
+    
+    // Dự đoán cân bằng
+    let balancePrediction = -1;
+    // Kiểm tra xu hướng gần đây (3 kết quả gần nhất)
+    const recent = recentNumbers.slice(0, 3);
+    const recentTaiCount = recent.filter(n => n >= 5).length;
+    
+    if (recentTaiCount >= 2) {
+        balancePrediction = getLuckyNumberInRange(0, 4); // Gần đây nhiều Tài, dự đoán Xỉu
+    } else {
+        balancePrediction = getLuckyNumberInRange(5, 9); // Gần đây nhiều Xỉu, dự đoán Tài
+    }
+    
+    // Kết hợp các dự đoán với trọng số
+    const predictions = [
+        { value: trendPrediction, weight: weights.trend },
+        { value: patternPrediction, weight: weights.pattern },
+        { value: frequencyPrediction, weight: weights.frequency },
+        { value: balancePrediction, weight: weights.balance }
+    ];
+    
+    // Tính điểm trọng số
+    let totalWeight = 0;
+    let weightedSum = 0;
+    
+    for (const pred of predictions) {
+        if (pred.value !== -1) {
+            weightedSum += pred.value * pred.weight;
+            totalWeight += pred.weight;
+        }
+    }
+    
+    if (totalWeight === 0) return getLuckyNumberInRange(0, 9);
+    
+    const result = Math.round(weightedSum / totalWeight);
+    return Math.max(0, Math.min(9, result));
+}
+
+/**
+ * Phân tích mẫu xen kẽ từ dữ liệu thực tế
+ */
+function alternatingPatternPredictor(history, index = 0) {
+    try {
+        const fs = require('fs');
+        const performanceFile = `taixiu_history_index${index}_limit15.performance`;
+        
+        if (!fs.existsSync(performanceFile)) {
+            return null;
+        }
+        
+        const content = fs.readFileSync(performanceFile, 'utf8');
+        const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+        
+        if (lines.length < 5) return null;
+        
+        // Phân tích kết quả thực tế
+        const realResults = [];
+        
+        for (const line of lines.slice(-10)) {
+            const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+            if (match) {
+                realResults.push(match[2] === 'Tài' ? true : false);
+            }
+        }
+        
+        // Phân tích mẫu xen kẽ
+        let alternating = 0;
+        for (let i = 0; i < realResults.length - 1; i++) {
+            if (realResults[i] !== realResults[i+1]) {
+                alternating++;
+            }
+        }
+        
+        const alternatingRatio = alternating / (realResults.length - 1);
+        console.log(`Tỷ lệ xen kẽ: ${(alternatingRatio*100).toFixed(1)}%`);
+        
+        // Nếu có xu hướng xen kẽ rõ ràng (>70%)
+        if (alternatingRatio > 0.7) {
+            // Dự đoán ngược với kết quả gần nhất
+            return realResults[0] ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+        }
+        
+        // Phân tích chuỗi kết quả giống nhau
+        let streak = 1;
+        let currentType = realResults[0];
+        
+        for (let i = 1; i < realResults.length; i++) {
+            if (realResults[i] === currentType) {
+                streak++;
+            } else {
+                currentType = realResults[i];
+                streak = 1;
+            }
+            
+            // Nếu có 2+ kết quả cùng loại, dự đoán ngược lại
+            if (streak >= 2 && i === realResults.length - 1) {
+                return currentType ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+            }
+        }
+        
+        // Nếu không tìm thấy xu hướng rõ ràng, dựa vào tỷ lệ Tài/Xỉu
+        const taiCount = realResults.filter(r => r).length;
+        if (taiCount > realResults.length * 0.6) {
+            return getLuckyNumberInRange(0, 4); // Nhiều Tài, dự đoán Xỉu
+        } else if (taiCount < realResults.length * 0.4) {
+            return getLuckyNumberInRange(5, 9); // Nhiều Xỉu, dự đoán Tài
+        }
+        
+        // Mặc định ngược với kết quả gần nhất
+        return realResults[0] ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+    } catch (error) {
+        console.error("Lỗi khi phân tích mẫu xen kẽ:", error);
+        return null;
+    }
+}
+
+/**
+ * Phân tích kết quả thực tế và tạo báo cáo hiệu suất
+ */
+function analyzeRealPatterns(index = 0) {
+    try {
+        const fs = require('fs');
+        const performanceFile = `taixiu_history_index${index}_limit15.performance`;
+        
+        if (!fs.existsSync(performanceFile)) {
+            return null;
+        }
+        
+        const content = fs.readFileSync(performanceFile, 'utf8');
+        const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+        
+        if (lines.length < 5) return null;
+        
+        // Phân tích 10 kết quả gần nhất
+        const recent = lines.slice(-10);
+        const realResults = [];
+        const predictions = [];
+        const accuracy = [];
+        
+        for (const line of recent) {
+            const realMatch = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
+            const predMatch = line.match(/Số dự đoán: (\d+) \((Tài|Xỉu)\)/);
+            const isCorrect = line.includes('| Đúng');
+            
+            if (realMatch && predMatch) {
+                realResults.push(realMatch[2]);
+                predictions.push(predMatch[2]);
+                accuracy.push(isCorrect ? 1 : 0);
+            }
+        }
+        
+        // Tính độ chính xác tổng thể
+        const overallAccuracy = accuracy.reduce((sum, val) => sum + val, 0) / accuracy.length;
+        
+        // Nếu độ chính xác < 50%, đảo ngược dự đoán
+        if (overallAccuracy < 0.5) {
+            console.log("Phát hiện độ chính xác thấp, đảo ngược dự đoán");
+            return Math.random() < 0.5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+        }
+        
+        // Phân tích kết quả thực tế
+        let pattern = realResults.join('');
+        
+        // Quy tắc đảo chiều dựa trên mẫu thực tế
+        if (pattern.startsWith('TàiTàiTài')) {
+            return getLuckyNumberInRange(0, 4); // Sau 3 Tài liên tiếp, dự đoán Xỉu
+        }
+        
+        if (pattern.startsWith('XỉuXỉuXỉu')) {
+            return getLuckyNumberInRange(5, 9); // Sau 3 Xỉu liên tiếp, dự đoán Tài
+        }
+        
+        if (pattern.startsWith('TàiTài')) {
+            return getLuckyNumberInRange(0, 4); // Sau 2 Tài liên tiếp, dự đoán Xỉu
+        }
+        
+        if (pattern.startsWith('XỉuXỉu')) {
+            return getLuckyNumberInRange(5, 9); // Sau 2 Xỉu liên tiếp, dự đoán Tài
+        }
+        
+        // Phân tích xen kẽ
+        if (pattern.startsWith('TàiXỉuTàiXỉu')) {
+            return getLuckyNumberInRange(5, 9); // Sau mẫu TXTX, dự đoán Tài
+        }
+        
+        if (pattern.startsWith('XỉuTàiXỉuTài')) {
+            return getLuckyNumberInRange(0, 4); // Sau mẫu XTXT, dự đoán Xỉu
+        }
+        
+        // Dự đoán dựa trên phân phối gần đây
+        const taiCount = realResults.filter(r => r === 'Tài').length;
+        if (taiCount >= realResults.length * 0.6) {
+            return getLuckyNumberInRange(0, 4); // Nhiều Tài, dự đoán Xỉu
+        } else if (taiCount <= realResults.length * 0.4) {
+            return getLuckyNumberInRange(5, 9); // Nhiều Xỉu, dự đoán Tài
+        }
+        
+        return Math.random() < 0.5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+    } catch (error) {
+        console.error("Lỗi khi phân tích mẫu thực tế:", error);
+        return null;
+    }
+}
+
+function anomalyFilterPredictor(history, index = 0) {
+    // Lấy 20 kết quả gần nhất
+    const recentNumbers = history.slice(0, 20).map(item => Number(item.numbers?.[index]));
+    
+    // Đếm tổng số lần xuất hiện Tài/Xỉu
+    const taiCount = recentNumbers.filter(n => n >= 5).length;
+    const xiuCount = recentNumbers.length - taiCount;
+    
+    // Tính tỷ lệ
+    const taiRatio = taiCount / recentNumbers.length;
+    
+    // Phân tích chuỗi liên tiếp
+    let maxTaiStreak = 0, maxXiuStreak = 0;
+    let currentTaiStreak = 0, currentXiuStreak = 0;
+    
+    for (const num of recentNumbers) {
+        if (num >= 5) {
+            currentTaiStreak++;
+            currentXiuStreak = 0;
+            maxTaiStreak = Math.max(maxTaiStreak, currentTaiStreak);
+        } else {
+            currentXiuStreak++;
+            currentTaiStreak = 0;
+            maxXiuStreak = Math.max(maxXiuStreak, currentXiuStreak);
+        }
+    }
+    
+    // Kiểm tra các mẫu bất thường
+    if (maxTaiStreak >= 5) {
+        // Nếu có 5 lần Tài liên tiếp, khả năng cao sẽ đổi sang Xỉu
+        return getLuckyNumberInRange(0, 4);
+    }
+    
+    if (maxXiuStreak >= 5) {
+        // Nếu có 5 lần Xỉu liên tiếp, khả năng cao sẽ đổi sang Tài
+        return getLuckyNumberInRange(5, 9); 
+    }
+    
+    // Kiểm tra tỷ lệ mất cân bằng
+    if (taiRatio > 0.7) {
+        // Nếu Tài chiếm ưu thế quá mức, Xỉu sẽ xuất hiện để cân bằng
+        return getLuckyNumberInRange(0, 4);
+    }
+    
+    if (taiRatio < 0.3) {
+        // Nếu Xỉu chiếm ưu thế quá mức, Tài sẽ xuất hiện để cân bằng
+        return getLuckyNumberInRange(5, 9);
+    }
+    
+    // Nếu không có mẫu bất thường, sử dụng dự đoán cơ bản
+    return recentNumbers[0] >= 5 ? 
+        getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+}
+
+/**
+ * Phân tích xu hướng
+ */
+function analyzeTrendDirection(numbers) {
+    if (!numbers || numbers.length < 5) return null;
+    
+    // Phân tích xu hướng tăng/giảm
+    let increasing = 0, decreasing = 0;
+    for (let i = 0; i < numbers.length - 1; i++) {
+        if (numbers[i] < numbers[i+1]) increasing++;
+        if (numbers[i] > numbers[i+1]) decreasing++;
+    }
+    
+    // Xác định xu hướng
+    if (increasing > decreasing + 2) {
+        // Xu hướng tăng rõ rệt
+        return getLuckyNumberInRange(5, 9); // Dự đoán Tài
+    } else if (decreasing > increasing + 2) {
+        // Xu hướng giảm rõ rệt
+        return getLuckyNumberInRange(0, 4); // Dự đoán Xỉu
+    }
+    
+    // Nếu không có xu hướng rõ ràng
+    return numbers[0] >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+}
+
+/**
+ * Phát hiện mẫu số 
+ */
+function detectNumberPattern(numbers) {
+    if (!numbers || numbers.length < 6) return null;
+    
+    // Chuyển đổi sang chuỗi Tài/Xỉu
+    const pattern = numbers.map(n => n >= 5 ? 'T' : 'X').join('');
+    
+    // Kiểm tra các mẫu đặc biệt
+    if (pattern.includes('TTT')) {
+        return getLuckyNumberInRange(0, 4); // Sau 3 Tài liên tiếp thường là Xỉu
+    }
+    
+    if (pattern.includes('XXX')) {
+        return getLuckyNumberInRange(5, 9); // Sau 3 Xỉu liên tiếp thường là Tài
+    }
+    
+    if (pattern.includes('TXTX')) {
+        return getLuckyNumberInRange(5, 9); // Sau mẫu TXTX thường là Tài
+    }
+    
+    if (pattern.includes('XTXT')) {
+        return getLuckyNumberInRange(0, 4); // Sau mẫu XTXT thường là Xỉu
+    }
+    
+    // Nếu không tìm thấy mẫu đặc biệt
+    return null;
+}
+
+/**
+ * Phân tích tần suất xuất hiện
+ */
+function numberFrequencyAnalysis(numbers) {
+    if (!numbers || numbers.length < 5) return null;
+    
+    // Đếm tần suất xuất hiện của từng số
+    const frequency = Array(10).fill(0);
+    for (const num of numbers) {
+        if (num >= 0 && num <= 9) {
+            frequency[num]++;
+        }
+    }
+    
+    // Tìm số có tần suất thấp nhất/cao nhất
+    let minIndex = 0, maxIndex = 0;
+    for (let i = 0; i < frequency.length; i++) {
+        if (frequency[i] < frequency[minIndex]) minIndex = i;
+        if (frequency[i] > frequency[maxIndex]) maxIndex = i;
+    }
+    
+    // Số có tần suất thấp có khả năng xuất hiện cao hơn
+    if (frequency[minIndex] === 0) {
+        return minIndex;
+    }
+    
+    // Nghịch lý: số xuất hiện nhiều có thể tiếp tục xuất hiện
+    if (frequency[maxIndex] >= 3) {
+        return maxIndex;
+    }
+    
+    // Tính tỷ lệ Tài/Xỉu
+    const taiCount = numbers.filter(n => n >= 5).length;
+    const xiuCount = numbers.length - taiCount;
+    
+    if (taiCount > xiuCount * 2) {
+        return getLuckyNumberInRange(0, 4); // Ưu thế Tài quá lớn, dự đoán Xỉu
+    }
+    
+    if (xiuCount > taiCount * 2) {
+        return getLuckyNumberInRange(5, 9); // Ưu thế Xỉu quá lớn, dự đoán Tài
+    }
+    
+    return null;
+}
+
+/**
+ * Dự đoán theo nguyên tắc cân bằng
+ */
+function balancePredictor(numbers) {
+    if (!numbers || numbers.length < 3) return null;
+    
+    // Kiểm tra xu hướng xen kẽ
+    let alternatingCount = 0;
+    for (let i = 0; i < numbers.length - 1; i++) {
+        if ((numbers[i] >= 5 && numbers[i+1] < 5) || 
+            (numbers[i] < 5 && numbers[i+1] >= 5)) {
+            alternatingCount++;
+        }
+    }
+    
+    // Nếu có xu hướng xen kẽ cao (>60%), duy trì xu hướng
+    const alternatingRatio = alternatingCount / (numbers.length - 1);
+    if (alternatingRatio > 0.6) {
+        // Dự đoán ngược với số gần nhất
+        return numbers[0] >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+    }
+    
+    // Nếu có 2+ số liên tiếp cùng loại, dự đoán ngược lại
+    let currentType = numbers[0] >= 5;
+    let streak = 1;
+    
+    for (let i = 1; i < numbers.length; i++) {
+        const isHigh = numbers[i] >= 5;
+        if (isHigh === currentType) {
+            streak++;
+            if (streak >= 2) {
+                // Sau 2+ số cùng loại, dự đoán đảo chiều
+                return isHigh ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+            }
+        } else {
+            currentType = isHigh;
+            streak = 1;
+        }
+    }
+    
+    // Dự đoán dựa trên tỷ lệ Tài/Xỉu
+    const taiCount = numbers.filter(n => n >= 5).length;
+    const taiRatio = taiCount / numbers.length;
+    
+    if (taiRatio > 0.6) return getLuckyNumberInRange(0, 4);
+    if (taiRatio < 0.4) return getLuckyNumberInRange(5, 9);
+    
+    // Mặc định ngược với giá trị gần nhất
+    return numbers[0] >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+}
+
+/**
+ * Dự đoán sử dụng mô hình chuỗi Markov
+ * Phân tích các mẫu chuyển tiếp từ trạng thái này sang trạng thái khác
+ */
+function markovChainPredictor(history, index = 0) {
+    if (!history || history.length < 5) return null;
+    
+    // Lấy dữ liệu số từ lịch sử
+    const numbers = history.slice(0, Math.min(20, history.length))
+        .map(item => {
+            if (!item || !item.numbers || !item.numbers[index]) return null;
+            return Number(item.numbers[index]);
+        })
+        .filter(num => num !== null && !isNaN(num));
+    
+    if (numbers.length < 5) return null;
+    
+    // Chuyển đổi thành chuỗi Tài/Xỉu
+    const states = numbers.map(n => n >= 5 ? 'T' : 'X');
+    
+    // Xây dựng ma trận chuyển tiếp
+    const transitions = {
+        'T': { 'T': 0, 'X': 0 },
+        'X': { 'T': 0, 'X': 0 }
+    };
+    
+    // Đếm các chuyển tiếp
+    for (let i = 0; i < states.length - 1; i++) {
+        const currentState = states[i];
+        const nextState = states[i + 1];
+        transitions[currentState][nextState]++;
+    }
+    
+    // Tính xác suất chuyển tiếp
+    const currentState = states[0];
+    const totalT = transitions[currentState]['T'] + transitions[currentState]['X'];
+    
+    if (totalT === 0) return getLuckyNumberInRange(0, 9);
+    
+    const probT = transitions[currentState]['T'] / totalT;
+    const probX = transitions[currentState]['X'] / totalT;
+    
+    console.log(`Xác suất chuyển tiếp - Tài: ${(probT*100).toFixed(1)}%, Xỉu: ${(probX*100).toFixed(1)}%`);
+    
+    // Dự đoán dựa trên xác suất cao hơn
+    if (probT > probX + 0.2) {
+        return getLuckyNumberInRange(5, 9); // Dự đoán Tài
+    } else if (probX > probT + 0.2) {
+        return getLuckyNumberInRange(0, 4); // Dự đoán Xỉu
+    } else {
+        // Nếu xác suất gần bằng nhau, dự đoán ngược với trạng thái hiện tại
+        return currentState === 'T' ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
     }
 }
 

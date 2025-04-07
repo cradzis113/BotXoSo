@@ -562,6 +562,27 @@ async function predictNumbers(history, index = 0, limit = { limitList: [5, 10, 1
             });
         }
 
+        // Phân tích hiệu suất thời gian nâng cao
+        const timeAnalysis = enhancedTimePerformanceAnalysis(history, index, fileConfig);
+        if (timeAnalysis && timeAnalysis.isOverallOptimalTime) {
+            console.log("Đang trong thời điểm dự đoán hiệu quả:", timeAnalysis.bestTimes);
+            
+            // Tăng trọng số cho các chiến lược dự đoán khi đang trong thời điểm tốt
+            for (const prediction of predictions) {
+                prediction.weight *= 1.2;
+            }
+        }
+
+        // Lưu kết quả phân tích 
+        try {
+            // Khai báo fs ở đây để tránh lỗi
+            const fs = require('fs');
+            const analysisFile = `${fileConfig[0]}_time_analysis.json`;
+            fs.writeFileSync(analysisFile, JSON.stringify(timeAnalysis, null, 2));
+        } catch (error) {
+            console.log("Lỗi khi lưu phân tích thời gian:", error);
+        }
+
         return result;
 
     } catch (error) {
@@ -1937,5 +1958,170 @@ function timeBasedPerformanceAnalysis(history, index = 0, fileConfig) {
     } catch (error) {
         return false;
     }
+}
+
+function enhancedTimePerformanceAnalysis(history, index = 0, fileConfig) {
+    try {
+        const fs = require('fs');
+        const performanceByTime = {
+            hourly: {},       // Phân tích theo giờ
+            weekday: {},      // Phân tích theo thứ trong tuần
+            timeOfDay: {      // Phân tích theo khoảng thời gian
+                morning: { total: 0, correct: 0 },    // 5:00-11:59
+                afternoon: { total: 0, correct: 0 },  // 12:00-17:59
+                evening: { total: 0, correct: 0 },    // 18:00-23:59
+                night: { total: 0, correct: 0 }       // 0:00-4:59
+            },
+            date: {}          // Phân tích theo ngày
+        };
+        
+        // Đọc dữ liệu từ file performance
+        const performanceFile = `${fileConfig[0]}_index${index}_limit15.performance`;
+        if (fs.existsSync(performanceFile)) {
+            const content = fs.readFileSync(performanceFile, 'utf8');
+            const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+            
+            // Phân tích dữ liệu theo thời gian
+            for (const line of lines) {
+                const timeMatch = line.match(/(\d+:\d+:\d+ [AP]M)/);
+                const isCorrect = line.includes('| Đúng');
+                
+                if (timeMatch) {
+                    const timeStr = timeMatch[1];
+                    const dateParts = new Date();
+                    
+                    // Phân tích thời gian
+                    const timeParts = timeStr.match(/(\d+):(\d+):(\d+) ([AP]M)/);
+                    if (timeParts) {
+                        let hour = parseInt(timeParts[1]);
+                        const minute = parseInt(timeParts[2]);
+                        const ampm = timeParts[4];
+                        
+                        // Chuyển đổi giờ sang định dạng 24 giờ
+                        if (ampm === 'PM' && hour < 12) hour += 12;
+                        if (ampm === 'AM' && hour === 12) hour = 0;
+                        
+                        dateParts.setHours(hour, minute);
+                        
+                        // 1. Phân tích theo giờ
+                        const hourKey = `${hour % 12 || 12} ${ampm}`;
+                        if (!performanceByTime.hourly[hourKey]) {
+                            performanceByTime.hourly[hourKey] = { total: 0, correct: 0 };
+                        }
+                        performanceByTime.hourly[hourKey].total++;
+                        if (isCorrect) {
+                            performanceByTime.hourly[hourKey].correct++;
+                        }
+                        
+                        // 2. Phân tích theo thứ trong tuần
+                        const weekday = getWeekdayName(dateParts.getDay());
+                        if (!performanceByTime.weekday[weekday]) {
+                            performanceByTime.weekday[weekday] = { total: 0, correct: 0 };
+                        }
+                        performanceByTime.weekday[weekday].total++;
+                        if (isCorrect) {
+                            performanceByTime.weekday[weekday].correct++;
+                        }
+                        
+                        // 3. Phân tích theo khoảng thời gian trong ngày
+                        let timeOfDay;
+                        if (hour >= 5 && hour < 12) {
+                            timeOfDay = 'morning';
+                        } else if (hour >= 12 && hour < 18) {
+                            timeOfDay = 'afternoon';
+                        } else if (hour >= 18 && hour < 24) {
+                            timeOfDay = 'evening';
+                        } else {
+                            timeOfDay = 'night';
+                        }
+                        
+                        performanceByTime.timeOfDay[timeOfDay].total++;
+                        if (isCorrect) {
+                            performanceByTime.timeOfDay[timeOfDay].correct++;
+                        }
+                        
+                        // 4. Phân tích theo ngày
+                        const dateKey = `${dateParts.getDate()}/${dateParts.getMonth() + 1}`;
+                        if (!performanceByTime.date[dateKey]) {
+                            performanceByTime.date[dateKey] = { total: 0, correct: 0 };
+                        }
+                        performanceByTime.date[dateKey].total++;
+                        if (isCorrect) {
+                            performanceByTime.date[dateKey].correct++;
+                        }
+                    }
+                }
+            }
+            
+            // Tìm thời điểm hiệu quả nhất cho từng loại phân tích
+            const bestTimes = {
+                hourly: findBestPerformanceTime(performanceByTime.hourly, 5),
+                weekday: findBestPerformanceTime(performanceByTime.weekday, 5),
+                timeOfDay: findBestPerformanceTime(performanceByTime.timeOfDay, 5),
+                date: findBestPerformanceTime(performanceByTime.date, 3)
+            };
+            
+            // Kiểm tra thời điểm hiện tại có phải thời điểm hiệu quả không
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentAMPM = currentHour >= 12 ? 'PM' : 'AM';
+            const currentHourKey = `${currentHour % 12 || 12} ${currentAMPM}`;
+            const currentWeekday = getWeekdayName(now.getDay());
+            
+            // Xác định thời điểm trong ngày hiện tại
+            let currentTimeOfDay;
+            if (currentHour >= 5 && currentHour < 12) {
+                currentTimeOfDay = 'morning';
+            } else if (currentHour >= 12 && currentHour < 18) {
+                currentTimeOfDay = 'afternoon';
+            } else if (currentHour >= 18) {
+                currentTimeOfDay = 'evening';
+            } else {
+                currentTimeOfDay = 'night';
+            }
+            
+            // Kiểm tra liệu thời điểm hiện tại có thuộc thời điểm tốt nhất không
+            const isOptimalTime = {
+                hourly: bestTimes.hourly.time === currentHourKey && bestTimes.hourly.accuracy > 0.6,
+                weekday: bestTimes.weekday.time === currentWeekday && bestTimes.weekday.accuracy > 0.6,
+                timeOfDay: bestTimes.timeOfDay.time === currentTimeOfDay && bestTimes.timeOfDay.accuracy > 0.6
+            };
+            
+            // Trả về kết quả phân tích
+            return {
+                bestTimes,
+                isOptimalTime,
+                isOverallOptimalTime: isOptimalTime.hourly || isOptimalTime.weekday || isOptimalTime.timeOfDay,
+                performanceData: performanceByTime
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        console.error("Lỗi khi phân tích hiệu suất thời gian:", error);
+        return null;
+    }
+}
+
+// Hàm hỗ trợ tìm thời điểm hiệu quả nhất
+function findBestPerformanceTime(timeData, minSamples = 5) {
+    let bestTime = '';
+    let bestAccuracy = 0;
+    
+    for (const [time, stats] of Object.entries(timeData)) {
+        if (stats.total >= minSamples) { // Chỉ xét khi có đủ mẫu
+            const accuracy = stats.correct / stats.total;
+            if (accuracy > bestAccuracy) {
+                bestAccuracy = accuracy;
+                bestTime = time;
+            }
+        }
+    }
+    
+    return {
+        time: bestTime,
+        accuracy: bestAccuracy,
+        sampleCount: bestTime ? timeData[bestTime].total : 0
+    };
 }
 

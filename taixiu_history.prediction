@@ -1,40 +1,39 @@
 {
   "predictions": [
-    2
+    6
   ],
   "stats": {
-    "accuracy": 0.8,
+    "accuracy": 0,
     "consecutiveWrong": 0
   },
-  "timestamp": "2025-04-06T17:33:16.053Z",
-  "timeVN": "07/04/2025 12:33:16 AM",
-  "drawId": "202504061405",
+  "timestamp": "2025-04-08T07:23:33.778Z",
+  "timeVN": "08/04/2025 2:23:33 PM",
+  "drawId": "202504080592",
   "votes": {
-    "tài": 0,
-    "xỉu": 1
+    "tài": 3,
+    "xỉu": 2
   },
   "strategies": [
-    "Sử dụng kết quả từ limit=5 (hiệu suất: 80.0%)",
-    "Đã thay đổi limitMain từ 15 sang 5 do hiệu suất tốt hơn"
+    "Sử dụng Markov Chain",
+    "Phân tích xu hướng đảo chiều",
+    "Nhận dạng mẫu",
+    "Phân tích thống kê",
+    "Phát hiện bất thường"
   ],
   "indexPredicted": 0,
   "limits": {
-    "main": 5,
+    "main": 15,
     "originalMain": 15,
-    "effective": [
-      5,
-      10,
-      15
-    ],
+    "effective": [],
     "all": [
       5,
       10,
       15
     ],
     "predictions": {
-      "5": 2,
-      "10": 3,
-      "15": 3
+      "5": 6,
+      "10": 6,
+      "15": 6
     }
   }
 }

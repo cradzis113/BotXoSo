@@ -1,206 +1,24 @@
 # File Performance với Limit=15 và Index=0
 
-Chu kỳ | 202504080384 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080386 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080387 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080388 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080389 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080390 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080391 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080392 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080393 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080394 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080395 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080396 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080397 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080398 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080399 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080400 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080401 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080402 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080403 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080404 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080405 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080406 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080407 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080408 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080409 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080410 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080411 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080412 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080413 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080414 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080415 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080416 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080417 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080418 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080419 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080420 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080421 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080422 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080423 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080424 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080425 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080426 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 8 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080427 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080428 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080429 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080430 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080431 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080432 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080433 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080434 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080435 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080436 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080437 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080438 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080439 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080440 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080441 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080442 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080443 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 8 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080444 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080445 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080446 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080447 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080448 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080449 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080450 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080451 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080452 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080453 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080454 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080455 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080456 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080457 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080458 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080459 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080460 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080461 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080462 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080463 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080464 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080465 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080466 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080467 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080468 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080469 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080470 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080471 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080472 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080473 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080474 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080475 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080476 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080477 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080478 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080479 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080480 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080481 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080482 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080483 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080484 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080485 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080486 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080487 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080488 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080489 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080490 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080491 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080492 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080493 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080494 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080495 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080496 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080497 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080498 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080499 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080500 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080501 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080502 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080503 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080504 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080505 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080506 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080507 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080508 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080509 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080510 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080511 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080512 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080513 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080514 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080515 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080516 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080517 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080518 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080519 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080520 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080521 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080522 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080523 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080524 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080525 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080526 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 1 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080528 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080529 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080530 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080531 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080532 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080533 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080534 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080535 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080536 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080537 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080538 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080539 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080540 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080541 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080542 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080544 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080545 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080546 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080547 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 8 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080548 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080549 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080550 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080551 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080552 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080553 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080554 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080555 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080556 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080557 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080558 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080559 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 8 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080560 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080561 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080562 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080563 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080564 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080565 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080566 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080567 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080568 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080569 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080570 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080571 | undefined | Số thực tế: 3 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080572 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080573 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080574 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080575 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080576 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080577 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080578 | undefined | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080579 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
-Chu kỳ | 202504080580 | undefined | Số thực tế: 9 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080581 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080582 | undefined | Số thực tế: 5 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080583 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080584 | undefined | Số thực tế: 8 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080585 | undefined | Số thực tế: 7 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080586 | undefined | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080587 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
-Chu kỳ | 202504080588 | undefined | Số thực tế: 6 (Tài) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080589 | undefined | Số thực tế: 0 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
-Chu kỳ | 202504080590 | undefined | Số thực tế: 2 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090831 | 09/04/2025 5:23:32 PM | Số thực tế: 1 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090832 | 09/04/2025 5:24:17 PM | Số thực tế: 6 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090833 | 09/04/2025 5:25:03 PM | Số thực tế: 2 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090834 | 09/04/2025 5:25:47 PM | Số thực tế: 6 (Tài) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504090835 | 09/04/2025 5:26:32 PM | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090836 | 09/04/2025 5:27:18 PM | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090837 | 09/04/2025 5:28:02 PM | Số thực tế: 6 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504090838 | 09/04/2025 5:28:47 PM | Số thực tế: 3 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090839 | 09/04/2025 5:29:32 PM | Số thực tế: 5 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504090840 | 09/04/2025 5:30:17 PM | Số thực tế: 1 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090841 | 09/04/2025 5:31:02 PM | Số thực tế: 0 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090842 | 09/04/2025 5:31:47 PM | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai
+Chu kỳ | 202504090843 | 09/04/2025 5:32:31 PM | Số thực tế: 0 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090844 | 09/04/2025 5:33:17 PM | Số thực tế: 1 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090845 | 09/04/2025 5:34:01 PM | Số thực tế: 4 (Xỉu) | Số dự đoán: 7 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090846 | 09/04/2025 5:34:47 PM | Số thực tế: 0 (Xỉu) | Số dự đoán: 3 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090847 | 09/04/2025 5:35:31 PM | Số thực tế: 3 (Xỉu) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090848 | 09/04/2025 5:36:17 PM | Số thực tế: 4 (Xỉu) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090849 | 09/04/2025 5:37:02 PM | Số thực tế: 5 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090850 | 09/04/2025 5:37:47 PM | Số thực tế: 1 (Xỉu) | Số dự đoán: 6 (Tài) | Vị trí: 0 | Sai
+Chu kỳ | 202504090851 | 09/04/2025 5:38:33 PM | Số thực tế: 0 (Xỉu) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Đúng
+Chu kỳ | 202504090852 | 09/04/2025 5:39:17 PM | Số thực tế: 6 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Sai

@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-04-09T10:39:17.541Z",
+  "timeVN": "09/04/2025 5:39:17 PM",
+  "performanceByLimit": {
+    "5": {
+      "accuracy": 0.45,
+      "consecutiveCorrect": 1,
+      "totalPredictions": 20,
+      "correctPredictions": 9
+    },
+    "10": {
+      "accuracy": 0.5,
+      "consecutiveCorrect": 1,
+      "totalPredictions": 20,
+      "correctPredictions": 10
+    },
+    "15": {
+      "accuracy": 0.5,
+      "consecutiveCorrect": 1,
+      "totalPredictions": 20,
+      "correctPredictions": 10
+    }
+  },
+  "bestLimit": {
+    "limit": 10,
+    "score": "40.00%"
+  }
+}

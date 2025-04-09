@@ -1,17 +1,17 @@
 {
   "predictions": [
-    6
+    3
   ],
   "stats": {
     "accuracy": 0,
     "consecutiveWrong": 0
   },
-  "timestamp": "2025-04-08T07:23:33.778Z",
-  "timeVN": "08/04/2025 2:23:33 PM",
-  "drawId": "202504080592",
+  "timestamp": "2025-04-09T10:39:17.542Z",
+  "timeVN": "09/04/2025 5:39:17 PM",
+  "drawId": "202504090853",
   "votes": {
-    "tài": 3,
-    "xỉu": 2
+    "tài": 2,
+    "xỉu": 3
   },
   "strategies": [
     "Sử dụng Markov Chain",
@@ -31,9 +31,9 @@
       15
     ],
     "predictions": {
-      "5": 6,
-      "10": 6,
-      "15": 6
+      "5": 4,
+      "10": 4,
+      "15": 4
     }
   }
 }

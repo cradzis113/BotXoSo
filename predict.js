@@ -65,7 +65,7 @@ function validateInputParams(history, index, limit, fileConfig) {
 
 // Hàm này kiểm tra xem file có mới được tạo không
 function isNewlyCreatedFile(filePath) {
-    const fs = require('fs');
+        const fs = require('fs');
     try {
         // Kiểm tra file có tồn tại không
         if (!fs.existsSync(filePath)) {
@@ -103,6 +103,103 @@ function formatTimeVN(drawId) {
     return `${day}/${month}/${year} ${hour12.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00 ${period}`;
 }
 
+// Thêm hàm mới để phân tích hiệu suất của từng limit
+function analyzePerformanceByLimit(fileConfig, index) {
+    const fs = require('fs');
+    const limitPerformance = {};
+    const allLimits = [5, 10, 15];
+    
+    // Phân tích hiệu suất cho từng limit
+    for (const limit of allLimits) {
+        const fileName = `${fileConfig[0]}_index${index}_limit${limit}.performance`;
+        if (fs.existsSync(fileName)) {
+            try {
+                const content = fs.readFileSync(fileName, 'utf8');
+                const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+                
+                // Lấy 20 kết quả gần nhất để phân tích
+                const recentResults = lines.slice(-20);
+                const totalPredictions = recentResults.length;
+                const correctPredictions = recentResults.filter(line => line.includes('| Đúng')).length;
+                
+                // Tính hiệu suất và số lần đúng liên tiếp
+                const accuracy = totalPredictions > 0 ? correctPredictions / totalPredictions : 0;
+                let consecutiveCorrect = 0;
+                for (let i = recentResults.length - 1; i >= 0; i--) {
+                    if (recentResults[i].includes('| Đúng')) {
+                        consecutiveCorrect++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                limitPerformance[limit] = {
+                    accuracy,
+                    consecutiveCorrect,
+                    totalPredictions,
+                    correctPredictions
+                };
+            } catch (error) {
+                console.error(`Lỗi khi đọc file limit ${limit}:`, error);
+            }
+        }
+    }
+    
+    return limitPerformance;
+}
+
+// Thêm hàm để chọn limit tốt nhất
+function selectBestLimit(performanceData) {
+    let bestLimit = 15; // Mặc định
+    let bestScore = 0;
+    
+    for (const [limit, data] of Object.entries(performanceData)) {
+        // Tính điểm dựa trên độ chính xác và số lần đúng liên tiếp
+        const score = (data.accuracy * 0.7) + (data.consecutiveCorrect * 0.05);
+        
+        // Chỉ xem xét nếu có đủ dữ liệu (ít nhất 10 dự đoán)
+        if (data.totalPredictions >= 10 && score > bestScore) {
+            bestScore = score;
+            bestLimit = parseInt(limit);
+        }
+    }
+    
+    return {
+        limit: bestLimit,
+        score: bestScore
+    };
+}
+
+// Thêm hàm mới để đọc và phân tích file performance analysis
+function getOptimalLimit(fileConfig) {
+    try {
+        const fs = require('fs');
+        const analysisPath = `${fileConfig[0]}_performance_analysis.log`;
+        
+        if (fs.existsSync(analysisPath)) {
+            const content = fs.readFileSync(analysisPath, 'utf8');
+            const analysis = JSON.parse(content);
+            
+            // Kiểm tra xem có dữ liệu phân tích không
+            if (analysis && analysis.performanceByLimit && analysis.bestLimit) {
+                // Kiểm tra điểm số của limit tốt nhất
+                const score = parseFloat(analysis.bestLimit.score);
+                if (score >= 60) { // Chỉ chuyển đổi nếu điểm số >= 60%
+                    return {
+                        limit: parseInt(analysis.bestLimit.limit),
+                        score: score,
+                        timestamp: analysis.timestamp
+                    };
+                }
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error("Lỗi khi đọc file phân tích:", error);
+        return null;
+    }
+}
+
 // Sửa đổi hàm updatePerformanceFile
 function updatePerformanceFile(fileConfig, index, limit, predictedNumber, actualNumber, drawId, timeVN) {
     if (actualNumber === null || actualNumber === undefined) {
@@ -110,40 +207,38 @@ function updatePerformanceFile(fileConfig, index, limit, predictedNumber, actual
     }
 
     const fs = require('fs');
-    const limitPerformancePath = `${fileConfig[0]}_index${index}_limit${limit.limitMain}.performance`;
-    const combinedPerformancePath = `${fileConfig[0]}_combined_performance.log`;
-
-    // Kiểm tra xem file có tồn tại không
-    const isNewFile = !fs.existsSync(limitPerformancePath);
-
-    // Nếu là file mới, chỉ tạo header và return
-    if (isNewFile) {
-        const header = `# File Performance với Limit=${limit.limitMain} và Index=${index}\n\n`;
-        fs.writeFileSync(limitPerformancePath, header, 'utf8');
-        return;
-    }
-
-    // Kiểm tra xem drawId đã tồn tại chưa
-    const existingContent = fs.readFileSync(limitPerformancePath, 'utf8');
-    if (existingContent.includes(`Chu kỳ | ${drawId}`)) {
-        return;
-    }
-
+    
+    // Cập nhật file performance cho limit cụ thể
+    const limitPath = `${fileConfig[0]}_index${index}_limit${limit.limitMain}.performance`;
     const resultType = predictedNumber >= 5 ? "Tài" : "Xỉu";
     const actualType = actualNumber >= 5 ? "Tài" : "Xỉu";
     const isCorrect = (predictedNumber >= 5) === (actualNumber >= 5);
-
-    const newLine = `Chu kỳ | ${drawId} | ${timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictedNumber} (${resultType}) | Vị trí: ${index} | ${isCorrect ? "Đúng" : "Sai"}`;
-
-    // Ghi vào file limit
-    fs.appendFileSync(limitPerformancePath, newLine + "\n");
-
-    // Xử lý file combined
-    if (!fs.existsSync(combinedPerformancePath)) {
+    
+    // Tạo dòng mới cho file limit
+    const limitLine = `Chu kỳ | ${drawId} | ${timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictedNumber} (${resultType}) | Vị trí: ${index} | ${isCorrect ? "Đúng" : "Sai"}`;
+    
+    // Cập nhật file limit - LUÔN ghi kể cả là lần đầu
+    if (!fs.existsSync(limitPath)) {
+        const header = `# File Performance với Limit=${limit.limitMain} và Index=${index}\n\n`;
+        fs.writeFileSync(limitPath, header + limitLine + "\n", 'utf8');
+        console.log(`Đã tạo file ${limitPath} và ghi chu kỳ đầu tiên`);
+    } else if (!fs.readFileSync(limitPath, 'utf8').includes(`Chu kỳ | ${drawId}`)) {
+        fs.appendFileSync(limitPath, limitLine + "\n");
+        console.log(`Đã thêm chu kỳ ${drawId} vào file ${limitPath}`);
+    }
+    
+    // Cập nhật file combined - LUÔN ghi kể cả là lần đầu
+    const combinedPath = `${fileConfig[0]}_combined_performance.log`;
+    const limitInfo = `| Limit: ${limit.limitMain}`;
+    const combinedLine = `Chu kỳ | ${drawId} | ${timeVN} | Số thực tế: ${actualNumber} (${actualType}) | Số dự đoán: ${predictedNumber} (${resultType}) | Vị trí: ${index} ${limitInfo} | ${isCorrect ? "Đúng" : "Sai"}`;
+    
+    if (!fs.existsSync(combinedPath)) {
         const header = "# File Performance Tổng Hợp - Theo Dõi Kết Quả Dự Đoán Với Tất Cả Các Limit\n\n";
-        fs.writeFileSync(combinedPerformancePath, header, 'utf8');
-    } else if (!fs.readFileSync(combinedPerformancePath, 'utf8').includes(`Chu kỳ | ${drawId}`)) {
-        fs.appendFileSync(combinedPerformancePath, newLine + "\n");
+        fs.writeFileSync(combinedPath, header + combinedLine + "\n", 'utf8');
+        console.log(`Đã tạo file ${combinedPath} và ghi chu kỳ đầu tiên`);
+    } else if (!fs.readFileSync(combinedPath, 'utf8').includes(`Chu kỳ | ${drawId}`)) {
+        fs.appendFileSync(combinedPath, combinedLine + "\n");
+        console.log(`Đã thêm chu kỳ ${drawId} vào file ${combinedPath}`);
     }
 }
 
@@ -171,134 +266,180 @@ function getNextDrawId(currentDrawId) {
  * Dự đoán số tiếp theo và tự động học từ file performance
  */
 async function predictNumbers(history, index = 0, limit = { limitList: [5, 10, 15], limitMain: 15 }, fileConfig = ["taixiu_history", true], log = false) {
-   console.log(history.slice(0, 10));
-    if (!history || !Array.isArray(history) || history.length === 0) {
-        console.log("History không hợp lệ hoặc rỗng");
-        return {
-            predictions: [0],
-            stats: { accuracy: 0, consecutiveWrong: 0 },
+    try {
+        // Validate input params
+        const validatedParams = validateInputParams(history, index, limit, fileConfig);
+        if (!validatedParams.isValid) {
+            console.error("Params không hợp lệ:", validatedParams.error);
+            throw new Error(validatedParams.error);
+        }
+
+        // Phân tích hiệu suất của các limit
+        const performanceData = analyzePerformanceByLimit(fileConfig, index);
+        const bestLimit = selectBestLimit(performanceData);
+        
+        // Log chi tiết hiệu suất
+        console.log("=== PHÂN TÍCH HIỆU SUẤT ===");
+        Object.entries(performanceData).forEach(([limit, data]) => {
+            console.log(`\nLimit ${limit}:`);
+            console.log(`- Tỷ lệ đúng: ${(data.accuracy * 100).toFixed(2)}%`);
+            console.log(`- Số lần đúng liên tiếp: ${data.consecutiveCorrect}`);
+            console.log(`- Tổng số dự đoán: ${data.totalPredictions}`);
+            console.log(`- Số lần đúng: ${data.correctPredictions}`);
+            console.log(`- Hiệu suất: ${((data.correctPredictions / data.totalPredictions) * 100).toFixed(2)}%`);
+        });
+
+        console.log("\n=== KẾT QUẢ CHỌN LIMIT ===");
+        console.log(`- Limit tốt nhất: ${bestLimit.limit}`);
+        console.log(`- Điểm số: ${(bestLimit.score * 100).toFixed(2)}%`);
+
+        // Lưu kết quả phân tích vào file
+        const analysisContent = {
             timestamp: new Date().toISOString(),
-            timeVN: getVietnamTimeNow(log),
-            drawId: "000000000000",
-            votes: { tài: 0, xỉu: 0 },
-            strategies: [],
-            indexPredicted: index,
-            limits: {
-                main: limit.limitMain,
-                originalMain: limit.limitMain,
-                effective: [],
-                all: limit.limitList,
-                predictions: {}
+            timeVN: getVietnamTimeNow(),
+            performanceByLimit: performanceData,
+            bestLimit: {
+                limit: bestLimit.limit,
+                score: (bestLimit.score * 100).toFixed(2) + "%"
             }
         };
-    }
-
-    // Validate input params
-    const validatedParams = validateInputParams(history, index, limit, fileConfig);
-    if (!validatedParams.isValid) {
-        console.error("Params không hợp lệ:", validatedParams.error);
-        throw new Error(validatedParams.error);
-    }
-
-    // Lấy drawId hiện tại và tính drawId tiếp theo
-    const currentData = history[0];
-    if (!currentData || !currentData.drawId) {
-        console.error("Không tìm thấy drawId trong history");
-        throw new Error("Không tìm thấy drawId trong history");
-    }
-
-    const nextDrawId = getNextDrawId(currentData.drawId);
-    const timeVN = currentData.timeVN || getVietnamTimeNow(log);
-
-    // Thu thập dự đoán từ các limit
-    const limitPredictions = {};
-    const allStrategies = new Set();
-    for (const l of validatedParams.limit.limitList) {
-        const result = predictWithLimit(history, index, { limitMain: l });
-        limitPredictions[l] = result.predictions[0];
-        result.strategies.forEach(s => allStrategies.add(s));
-    }
-
-    // Lấy kết quả từ limitMain
-    const mainResult = predictWithLimit(history, index, { limitMain: validatedParams.limit.limitMain });
-
-    // Tạo kết quả cuối cùng
-    const finalResult = {
-        predictions: mainResult.predictions,
-        stats: mainResult.stats,
-        timestamp: new Date().toISOString(),
-        timeVN: timeVN,
-        drawId: nextDrawId,  // Sử dụng drawId của chu kỳ tiếp theo
-        votes: mainResult.votes,
-        strategies: Array.from(allStrategies),
-        indexPredicted: index,
-        limits: {
-            main: validatedParams.limit.limitMain,
-            originalMain: limit.limitMain,
-            effective: [],
-            all: validatedParams.limit.limitList,
-            predictions: limitPredictions
-        }
-    };
-
-    // Ghi file prediction và performance
-    try {
-        // Ghi prediction mới
-        const predictionFilePath = `${fileConfig[0]}.prediction`;
-        const predictionContent = JSON.stringify(finalResult, null, 2);
-        fs.writeFileSync(predictionFilePath, predictionContent, 'utf8');
         
-        // Kiểm tra và ghi performance nếu có history
-        if (history && history.length > 1) {
-            // Lấy kết quả thực tế từ phần tử thứ hai của history (kết quả của lần dự đoán trước)
-            const previousResult = history[1];
-            if (previousResult && previousResult.numbers && previousResult.drawId) {
-                const actualNumber = Number(previousResult.numbers[index]);
-                
-                // Đọc file prediction cũ
-                if (fs.existsSync(predictionFilePath)) {
-                    try {
-                        const oldPredictionContent = fs.readFileSync(predictionFilePath, 'utf8');
-                        const oldPrediction = JSON.parse(oldPredictionContent);
-                        
-                        // Ghi performance cho mỗi limit
-                        for (const l of validatedParams.limit.limitList) {
-                            if (oldPrediction.limits && oldPrediction.limits.predictions && oldPrediction.limits.predictions[l] !== undefined) {
-                                updatePerformanceFile(
-                                    fileConfig,
-                                    index,
-                                    { limitMain: l },
-                                    oldPrediction.limits.predictions[l],
-                                    actualNumber,
-                                    previousResult.drawId,  // Sử dụng drawId từ history
-                                    previousResult.timeVN
-                                );
-                            }
-                        }
+        fs.writeFileSync(
+            `${fileConfig[0]}_performance_analysis.log`,
+            JSON.stringify(analysisContent, null, 2),
+            'utf8'
+        );
 
-                        // Ghi performance cho limitMain
-                        if (oldPrediction.predictions && oldPrediction.predictions.length > 0) {
-                            updatePerformanceFile(
-                                fileConfig,
-                                index,
-                                { limitMain: validatedParams.limit.limitMain },
-                                oldPrediction.predictions[0],
-                                actualNumber,
-                                previousResult.drawId,  // Sử dụng drawId từ history
-                                previousResult.timeVN
-                            );
+        // Sử dụng limit tốt nhất nếu điểm số đủ cao
+        const effectiveLimit = bestLimit.score > 0.6 ? bestLimit.limit : validatedParams.limit.limitMain;
+        validatedParams.limit.limitMain = effectiveLimit;
+
+        if (!history || !Array.isArray(history) || history.length === 0) {
+            console.log("History không hợp lệ hoặc rỗng");
+            return {
+                predictions: [0],
+                stats: { accuracy: 0, consecutiveWrong: 0 },
+                timestamp: new Date().toISOString(),
+                timeVN: getVietnamTimeNow(log),
+                drawId: "000000000000",
+                votes: { tài: 0, xỉu: 0 },
+                strategies: [],
+                indexPredicted: index,
+                limits: {
+                    main: effectiveLimit,
+                    originalMain: limit.limitMain,
+                    effective: [],
+                    all: limit.limitList,
+                    predictions: {}
+                }
+            };
+        }
+
+        // Lấy drawId hiện tại và LUÔN tính drawId tiếp theo
+        const currentData = history[0];
+        if (!currentData || !currentData.drawId) {
+            console.error("Không tìm thấy drawId trong history");
+            throw new Error("Không tìm thấy drawId trong history");
+        }
+
+        // LUÔN tính nextDrawId cho chu kỳ tiếp theo, bất kể có file prediction hay không
+        const currentDrawId = currentData.drawId;
+        const prefix = currentDrawId.slice(0, -2);
+        const currentSequence = parseInt(currentDrawId.slice(-2));
+        const nextSequence = currentSequence + 1;
+        const nextDrawId = `${prefix}${nextSequence.toString().padStart(2, '0')}`;
+
+        // Thu thập dự đoán từ các limit
+        const limitPredictions = {};
+        const allStrategies = new Set();
+        for (const l of validatedParams.limit.limitList) {
+            const result = predictWithLimit(history, index, { limitMain: l });
+            limitPredictions[l] = result.predictions[0];
+            result.strategies.forEach(s => allStrategies.add(s));
+        }
+
+        // Lấy kết quả từ limitMain
+        const mainResult = predictWithLimit(history, index, { limitMain: effectiveLimit });
+
+        // Tạo kết quả cuối cùng, LUÔN sử dụng nextDrawId
+        const finalResult = {
+            predictions: mainResult.predictions,
+            stats: mainResult.stats,
+            timestamp: new Date().toISOString(),
+            timeVN: getVietnamTimeNow(),
+            drawId: nextDrawId,  // Luôn sử dụng nextDrawId
+            votes: mainResult.votes,
+            strategies: Array.from(allStrategies),
+            indexPredicted: index,
+            limits: {
+                main: effectiveLimit,
+                originalMain: limit.limitMain,
+                effective: [],
+                all: validatedParams.limit.limitList,
+                predictions: limitPredictions
+            }
+        };
+
+        // Ghi file prediction và performance
+        try {
+            // Ghi prediction mới
+            const predictionFilePath = `${fileConfig[0]}.prediction`;
+            const predictionContent = JSON.stringify(finalResult, null, 2);
+            fs.writeFileSync(predictionFilePath, predictionContent, 'utf8');
+            
+            // Kiểm tra và ghi performance nếu có history
+            if (history && history.length > 1) {
+                // Lấy kết quả thực tế từ history[0] (kết quả hiện tại)
+                const currentResult = history[0];
+                if (currentResult && currentResult.numbers && currentResult.drawId) {
+                    const actualNumber = Number(currentResult.numbers[index]);
+                    
+                    // Đọc file prediction cũ
+                    if (fs.existsSync(predictionFilePath)) {
+                        try {
+                            const oldPredictionContent = fs.readFileSync(predictionFilePath, 'utf8');
+                            const oldPrediction = JSON.parse(oldPredictionContent);
+                            
+                            // Ghi performance cho mỗi limit
+                            for (const l of validatedParams.limit.limitList) {
+                                if (oldPrediction.limits && oldPrediction.limits.predictions && oldPrediction.limits.predictions[l] !== undefined) {
+                                    updatePerformanceFile(
+                                        fileConfig,
+                                        index,
+                                        { limitMain: l },
+                                        oldPrediction.limits.predictions[l],
+                                        actualNumber,
+                                        currentResult.drawId,  // Sử dụng drawId hiện tại
+                                        currentResult.timeVN || getVietnamTimeNow()
+                                    );
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Lỗi khi đọc/xử lý file prediction cũ:", error);
                         }
-                    } catch (error) {
-                        console.error("Lỗi khi đọc/xử lý file prediction cũ:", error);
                     }
                 }
             }
+        } catch (error) {
+            console.error("Lỗi khi ghi file:", error);
         }
-    } catch (error) {
-        console.error("Lỗi khi ghi file:", error);
-    }
 
-    return finalResult;
+        // Cập nhật thông tin limit trong kết quả
+        finalResult.limits = {
+            ...finalResult.limits,
+            main: effectiveLimit,
+            originalMain: limit.limitMain,
+            bestLimit: {
+                limit: bestLimit.limit,
+                score: (bestLimit.score * 100).toFixed(2) + "%"
+            }
+        };
+
+        return finalResult;
+    } catch (error) {
+        console.error("Lỗi trong predictNumbers:", error);
+        throw error;
+    }
 }
 
 // Hàm tính toán votes dựa trên tất cả các dự đoán
@@ -314,7 +455,7 @@ function calculateVotes(limitPredictions) {
         }
     });
 
-    return {
+        return {
         tài: taiCount,
         xỉu: xiuCount
     };
@@ -453,45 +594,28 @@ function getWeekdayName(weekday) {
 /**
  * Lấy thời gian hiện tại ở Việt Nam
  */
-function getVietnamTimeNow(log = false) {
-    // Lấy thời gian hiện tại theo UTC
+function getVietnamTimeNow() {
     const now = new Date();
-
-    // Tạo thời gian Việt Nam (UTC+7)
-    const utcHours = now.getUTCHours();
-    const utcMinutes = now.getUTCMinutes();
-    const utcSeconds = now.getUTCSeconds();
-    const utcDate = now.getUTCDate();
-    const utcMonth = now.getUTCMonth(); // 0-11
-    const utcYear = now.getUTCFullYear();
-
-    // Tính giờ Vietnam (UTC+7)
-    let vnHours = (utcHours + 7) % 24;
-    let vnDate = utcDate;
-    let vnMonth = utcMonth;
-    let vnYear = utcYear;
-
-    // Xử lý trường hợp chuyển ngày
-    if (utcHours + 7 >= 24) {
-        const nextDay = new Date(Date.UTC(utcYear, utcMonth, utcDate + 1));
-        vnDate = nextDay.getUTCDate();
-        vnMonth = nextDay.getUTCMonth();
-        vnYear = nextDay.getUTCFullYear();
-    }
-
-    // Tạo chuỗi định dạng ngày/tháng/năm
-    const dateStr = `${vnDate.toString().padStart(2, '0')}/${(vnMonth + 1).toString().padStart(2, '0')}/${vnYear}`;
-
-    // Chuyển sang định dạng 12 giờ (AM/PM)
-    const ampm = vnHours >= 12 ? 'PM' : 'AM';
-    vnHours = vnHours % 12;
-    vnHours = vnHours ? vnHours : 12; // Giờ 0 hiển thị là 12
-
-    // Tạo chuỗi định dạng giờ:phút:giây
-    const timeStr = `${vnHours}:${utcMinutes.toString().padStart(2, '0')}:${utcSeconds.toString().padStart(2, '0')} ${ampm}`;
+    // Chuyển đổi sang múi giờ Việt Nam (UTC+7)
+    const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    
+    // Format ngày tháng
+    const day = vnTime.getUTCDate().toString().padStart(2, '0');
+    const month = (vnTime.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = vnTime.getUTCFullYear();
+    
+    // Format giờ phút giây
+    let hours = vnTime.getUTCHours();
+    const minutes = vnTime.getUTCMinutes().toString().padStart(2, '0');
+    const seconds = vnTime.getUTCSeconds().toString().padStart(2, '0');
+    
+    // Chuyển sang định dạng 12 giờ
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 giờ sẽ hiển thị là 12
 
     // Trả về chuỗi định dạng đầy đủ
-    return `${dateStr} ${timeStr}`;
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds} ${ampm}`;
 }
 
 /**
@@ -2386,4 +2510,19 @@ function metaPredictor(history, index = 0, fileConfig) {
     
     // Nếu không, sử dụng limit tốt nhất với predictWithLimit hoặc tự triển khai
     return predictWithLimit(history, index, { limitMain: bestLimit });
+}
+
+// Thêm hàm để format hiệu suất để dễ đọc
+function formatPerformanceData(performanceData) {
+    const result = {};
+    for (const [limit, data] of Object.entries(performanceData)) {
+        result[limit] = {
+            tỷLệĐúng: `${(data.accuracy * 100).toFixed(2)}%`,
+            đúngLiênTiếp: data.consecutiveCorrect,
+            tổngDựĐoán: data.totalPredictions,
+            sốLầnĐúng: data.correctPredictions,
+            hiệuSuất: `${((data.correctPredictions / data.totalPredictions) * 100).toFixed(2)}%`
+        };
+    }
+    return result;
 }

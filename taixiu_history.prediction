@@ -1,14 +1,14 @@
 {
   "predictions": [
-    3
+    4
   ],
   "stats": {
     "accuracy": 0,
     "consecutiveWrong": 0
   },
-  "timestamp": "2025-04-09T10:39:17.542Z",
-  "timeVN": "09/04/2025 5:39:17 PM",
-  "drawId": "202504090853",
+  "timestamp": "2025-04-10T04:52:48.280Z",
+  "timeVN": "10/04/2025 11:52:48 AM",
+  "drawId": "202504100391",
   "votes": {
     "tài": 2,
     "xỉu": 3
@@ -17,14 +17,14 @@
     "Sử dụng Markov Chain",
     "Phân tích xu hướng đảo chiều",
     "Nhận dạng mẫu",
-    "Phân tích thống kê",
     "Phát hiện bất thường"
   ],
   "indexPredicted": 0,
   "limits": {
-    "main": 15,
-    "originalMain": 15,
-    "effective": [],
+    "bestLimit": {
+      "limit": 5,
+      "score": "75.00%"
+    },
     "all": [
       5,
       10,
@@ -32,8 +32,8 @@
     ],
     "predictions": {
       "5": 4,
-      "10": 4,
-      "15": 4
+      "10": 5,
+      "15": 6
     }
   }
 }

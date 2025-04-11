@@ -1,0 +1,38 @@
+{
+  "markov": {
+    "correct": 8,
+    "total": 12
+  },
+  "trend": {
+    "correct": 5,
+    "total": 12
+  },
+  "anomaly": {
+    "correct": 7,
+    "total": 12
+  },
+  "timeseries": {
+    "correct": 10,
+    "total": 12
+  },
+  "gametheory": {
+    "correct": 4,
+    "total": 12
+  },
+  "adaptive": {
+    "correct": 8,
+    "total": 12
+  },
+  "recent_trend": {
+    "correct": 8,
+    "total": 12
+  },
+  "pattern": {
+    "correct": 2,
+    "total": 2
+  },
+  "dominant_trend": {
+    "correct": 4,
+    "total": 6
+  }
+}

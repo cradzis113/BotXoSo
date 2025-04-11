@@ -1,67 +1,25 @@
 {
-  "prediction": 7,
-  "type": "Tài",
+  "prediction": 3,
+  "type": "Xỉu",
   "limit": 15,
   "score": "50.00%",
-  "timestamp": "2025-04-11T06:32:45.721Z",
-  "timeVN": "11/04/2025 1:32:45 PM",
-  "drawId": "202504110524",
+  "timestamp": "2025-04-11T10:44:45.731Z",
+  "timeVN": "11/04/2025 5:44:45 PM",
+  "drawId": "202504110860",
   "votes": {
-    "tài": 1.1500000000000001,
-    "xỉu": 0.05
+    "tài": 0.1,
+    "xỉu": 0.9
   },
   "strategies": [
-    "Sử dụng Markov Chain",
-    "Phân tích xu hướng đảo chiều",
-    "Phát hiện bất thường",
-    "Phân tích chuỗi thời gian",
-    "Lý thuyết trò chơi",
-    "Mô hình học máy đơn giản với Logistic Regression",
-    "Xu hướng gần đây"
+    "Xu hướng Xỉu mạnh gần đây"
   ],
   "indexPredicted": 0,
   "predictorDetails": [
     {
-      "name": "markov",
-      "value": 8,
-      "weight": 0.15,
-      "type": "Tài"
-    },
-    {
-      "name": "trend",
+      "name": "dominant_trend",
       "value": 3,
-      "weight": 0.05,
+      "weight": 1,
       "type": "Xỉu"
-    },
-    {
-      "name": "anomaly",
-      "value": 8,
-      "weight": 0.1,
-      "type": "Tài"
-    },
-    {
-      "name": "timeseries",
-      "value": 8,
-      "weight": 0.15,
-      "type": "Tài"
-    },
-    {
-      "name": "gametheory",
-      "value": 7,
-      "weight": 0.2,
-      "type": "Tài"
-    },
-    {
-      "name": "adaptive",
-      "value": 7,
-      "weight": 0.25,
-      "type": "Tài"
-    },
-    {
-      "name": "recent_trend",
-      "value": 8,
-      "weight": 0.3,
-      "type": "Tài"
     }
   ]
 }

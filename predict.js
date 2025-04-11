@@ -52,46 +52,73 @@ function analyzePerformanceByLimit(fileConfig, index) {
     const limitPerformance = {};
     const allLimits = [5, 10, 15];
 
-    // Phân tích hiệu suất cho từng limit
-    for (const limit of allLimits) {
-        const fileName = `${fileConfig[0]}_index${index}_limit${limit}.performance`;
-        if (fs.existsSync(fileName)) {
-            try {
-                // Sử dụng hàm phân tích kết quả thực tế
-                const actualResults = analyzeActualResults(fileName);
-                const trends = analyzeActualTrends(actualResults);
-
-                // Lấy 20 kết quả gần nhất để phân tích
-                const recentResults = actualResults.slice(0, 20);
-                const totalPredictions = recentResults.length;
-
-                // Đọc nội dung file để xác định số lần dự đoán đúng
-                const content = fs.readFileSync(fileName, 'utf8');
-                const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
-                const recentLines = lines.slice(-20);
-                const correctPredictions = recentLines.filter(line => line.includes('| Đúng')).length;
-
-                // Tính hiệu suất và số lần đúng liên tiếp
-                const accuracy = totalPredictions > 0 ? correctPredictions / totalPredictions : 0;
-                let consecutiveCorrect = 0;
-                for (let i = recentLines.length - 1; i >= 0; i--) {
-                    if (recentLines[i].includes('| Đúng')) {
-                        consecutiveCorrect++;
-                    } else {
-                        break;
+    // Đọc từ file combined thay vì nhiều file riêng lẻ
+    const combinedPath = `${fileConfig[0]}_combined_performance.log`;
+    if (fs.existsSync(combinedPath)) {
+        try {
+            const content = fs.readFileSync(combinedPath, 'utf8');
+            const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
+            
+            // Lọc các dòng có Vị trí trùng với index được chỉ định
+            const indexLines = lines.filter(line => line.includes(`| Vị trí: ${index} |`));
+            
+            // Xử lý cho từng limit
+            for (const limit of allLimits) {
+                // Lọc các dòng thuộc về limit này VÀ có vị trí index
+                const limitLines = indexLines.filter(line => line.includes(`| Limit: ${limit}`));
+                // Lấy 20 kết quả gần nhất
+                const recentLines = limitLines.slice(-20);
+                
+                // Tính hiệu suất nếu có dữ liệu
+                if (recentLines.length > 0) {
+                    const correctPredictions = recentLines.filter(line => line.includes('| Đúng')).length;
+                    const totalPredictions = recentLines.length;
+                    const accuracy = correctPredictions / totalPredictions;
+                    
+                    // Phân tích streak gần đây (liên tiếp đúng hoặc sai)
+                    let currentCorrectStreak = 0;
+                    let maxCorrectStreak = 0;
+                    let currentWrongStreak = 0;
+                    let maxWrongStreak = 0;
+                    
+                    // Xử lý từ kết quả gần nhất (đầu mảng) đến xa nhất
+                    for (const line of recentLines) {
+                        if (line.includes('| Đúng')) {
+                            currentCorrectStreak++;
+                            currentWrongStreak = 0;
+                            maxCorrectStreak = Math.max(maxCorrectStreak, currentCorrectStreak);
+                        } else {
+                            currentWrongStreak++;
+                            currentCorrectStreak = 0;
+                            maxWrongStreak = Math.max(maxWrongStreak, currentWrongStreak);
+                        }
                     }
+                    
+                    // Phân tích xu hướng Tài/Xỉu
+                    const taiActual = recentLines.filter(line => line.includes('(Tài)')).length;
+                    const xiuActual = recentLines.length - taiActual;
+                    const taiRatio = taiActual / recentLines.length;
+                    
+                    limitPerformance[limit] = {
+                        correctPredictions,
+                        totalPredictions,
+                        accuracy,
+                        maxCorrectStreak,
+                        maxWrongStreak,
+                        currentStreak: recentLines[0].includes('| Đúng') ? 
+                            currentCorrectStreak : -currentWrongStreak,
+                        taiRatio,
+                        xiuRatio: 1 - taiRatio,
+                        recentLines: recentLines.slice(0, 5) // 5 kết quả gần nhất
+                    };
+                    
+                    console.log(`Limit ${limit}: ${correctPredictions}/${totalPredictions} đúng (${(accuracy*100).toFixed(1)}%), index=${index}`);
+                } else {
+                    console.log(`Limit ${limit}: Chưa có dữ liệu cho index=${index}`);
                 }
-
-                limitPerformance[limit] = {
-                    accuracy,
-                    consecutiveCorrect,
-                    totalPredictions,
-                    correctPredictions,
-                    recentTrends: trends // Thêm thông tin xu hướng gần đây
-                };
-            } catch (error) {
-                console.error(`Lỗi khi đọc file limit ${limit}:`, error);
             }
+        } catch (error) {
+            console.error(`Lỗi khi đọc file combined:`, error);
         }
     }
 
@@ -102,7 +129,7 @@ function analyzePerformanceByLimit(fileConfig, index) {
 function selectBestLimit(performanceData, defaultLimit, history, index, limitList = [5, 10, 15]) {
     let bestLimit = defaultLimit;
     let bestScore = 0;
-    
+
     // THÊM MỚI: Kiểm tra chuỗi dự đoán sai gần đây để quyết định đổi limit
     try {
         const fs = require('fs');
@@ -127,7 +154,10 @@ function selectBestLimit(performanceData, defaultLimit, history, index, limitLis
                 
                 // Nếu có ít nhất 2 dự đoán sai liên tiếp với limit hiện tại
                 if (wrongPredictions >= 2) {
-                    console.log(`Phát hiện ${wrongPredictions} dự đoán sai với limit=${currentLimit}, chuyển sang limit khác`);
+                    // Code hiện tại không hoạt động đúng khi có 3 dự đoán sai liên tiếp
+                    // Sửa lại cách phát hiện dự đoán sai liên tiếp
+                    const consecutiveWrong = getConsecutiveWrongPredictions(recentResults);
+                    console.log(`Phát hiện ${consecutiveWrong} dự đoán sai liên tiếp với limit=${currentLimit}`);
                     
                     // Chọn limit khác trong danh sách
                     const otherLimits = limitList.filter(l => l !== currentLimit);
@@ -177,9 +207,78 @@ function selectBestLimit(performanceData, defaultLimit, history, index, limitLis
         console.error("Lỗi khi kiểm tra chuỗi dự đoán sai:", error);
     }
     
-    // Phần còn lại của hàm giữ nguyên
-    // [Giữ nguyên code tính toán dựa trên performance data]
-
+    // THÊM MỚI: Nếu không có đủ dữ liệu hiệu suất, sử dụng history
+    const hasEnoughPerformanceData = Object.keys(performanceData).length > 0 && 
+        Object.values(performanceData).some(data => data.totalPredictions >= 3);
+    
+    if (!hasEnoughPerformanceData && history && history.length > 0) {
+        console.log("Không đủ dữ liệu hiệu suất, phân tích history để chọn limit tốt nhất");
+        
+        // Kiểm tra hiệu quả của từng limit với dữ liệu lịch sử
+        const limitScores = {};
+        
+        // Thử từng limit với history
+        for (const testLimit of limitList) {
+            // Lấy phần history tương ứng với limit
+            const limitedHistory = history.slice(0, testLimit);
+            
+            // Lấy các số thực tế từ history với index đã cho
+            const actualNums = limitedHistory.map(item => {
+                if (!item || !item.numbers || !item.numbers[index]) return null;
+                const num = Number(item.numbers[index]);
+                return !isNaN(num) ? num : null;
+            }).filter(n => n !== null);
+            
+            if (actualNums.length < 3) continue; // Cần ít nhất 3 số để đánh giá
+            
+            // Phân tích xu hướng
+            const taiCount = actualNums.filter(n => n >= 5).length;
+            const xiuCount = actualNums.length - taiCount;
+            
+            // Xem xu hướng có rõ ràng không (>60% là một loại)
+            const taiRatio = taiCount / actualNums.length;
+            const hasClearTrend = taiRatio >= 0.6 || taiRatio <= 0.4;
+            
+            // Kiểm tra chuỗi liên tiếp
+            let maxStreak = 0;
+            let currentStreak = 1;
+            
+            for (let i = 1; i < actualNums.length; i++) {
+                if ((actualNums[i] >= 5) === (actualNums[i-1] >= 5)) {
+                    currentStreak++;
+                } else {
+                    currentStreak = 1;
+                }
+                maxStreak = Math.max(maxStreak, currentStreak);
+            }
+            
+            // Tính điểm cho limit này
+            // - Có xu hướng rõ ràng: +0.3
+            // - Có chuỗi dài (>=3): +0.2
+            // - Limit lớn hơn có nhiều dữ liệu hơn: +0.1 mỗi 5 mẫu
+            let score = 0.5; // Điểm cơ bản
+            
+            if (hasClearTrend) score += 0.3;
+            if (maxStreak >= 3) score += 0.2;
+            score += Math.min(0.3, 0.1 * Math.floor(actualNums.length / 5));
+            
+            limitScores[testLimit] = score;
+            console.log(`Limit ${testLimit}: Điểm = ${score.toFixed(2)}, ${actualNums.length} mẫu, Trend: ${taiRatio.toFixed(2)}, MaxStreak: ${maxStreak}`);
+        }
+        
+        // Chọn limit có điểm cao nhất
+        if (Object.keys(limitScores).length > 0) {
+            const bestLimitEntry = Object.entries(limitScores).reduce((best, current) => 
+                current[1] > best[1] ? current : best, [defaultLimit, 0.5]);
+            
+            bestLimit = parseInt(bestLimitEntry[0]);
+            bestScore = bestLimitEntry[1];
+            
+            console.log(`Chọn limit ${bestLimit} dựa trên phân tích history với điểm ${bestScore.toFixed(2)}`);
+        }
+    }
+    
+    // Nếu không có thông tin gì đặc biệt, sử dụng limit mặc định
     return {
         limit: bestLimit,
         score: bestScore > 0 ? bestScore : 0.5
@@ -215,7 +314,7 @@ async function predictNumbers(history, index = 0, limit = { limitList: [5, 10, 1
         const currentSequence = parseInt(currentDrawId.slice(-2));
         const nextSequence = currentSequence + 1;
         const nextDrawId = `${prefix}${nextSequence.toString().padStart(2, '0')}`;
-
+        
         // Bước 2: CHỈ dự đoán một lần với limit tốt nhất
         const mainResult = predictWithLimit(history, index, { limitMain: bestLimit.limit });
         const prediction = mainResult.predictions[0];
@@ -223,21 +322,21 @@ async function predictNumbers(history, index = 0, limit = { limitList: [5, 10, 1
         // Đọc file prediction cũ và cập nhật performance nếu có
         const predictionFilePath = `${fileConfig[0]}.prediction`;
         let previousPrediction = null;
-
+        
         if (fs.existsSync(predictionFilePath)) {
             try {
                 const predictionContent = fs.readFileSync(predictionFilePath, 'utf8');
                 previousPrediction = JSON.parse(predictionContent);
-
+                
                 // Kiểm tra và cập nhật file performance với dự đoán cũ
                 if (history && history.length > 0 && previousPrediction) {
                     const actualResult = history[0];
-
+                    
                     // So sánh drawId của dự đoán cũ với drawId hiện tại
                     if (previousPrediction.drawId === actualResult.drawId) {
                         // Có dự đoán cho chu kỳ hiện tại, cập nhật performance
                         const actualNumber = Number(actualResult.numbers[index]);
-
+                        
                         // Thêm dòng này: cập nhật hiệu suất của từng predictor
                         if (previousPrediction.predictorDetails) {
                             const predictorResults = {};
@@ -248,26 +347,26 @@ async function predictNumbers(history, index = 0, limit = { limitList: [5, 10, 1
                         }
 
                         // Cập nhật file performance cho bestLimit
-                        updateLimitPerformanceFile(
-                            fileConfig,
-                            index,
+                                updateLimitPerformanceFile(
+                                    fileConfig,
+                                    index,
                             { limitMain: previousPrediction.limit },
                             previousPrediction.prediction,
-                            actualNumber,
-                            actualResult.drawId,
-                            actualResult.timeVN || getVietnamTimeNow()
-                        );
+                                    actualNumber,
+                                    actualResult.drawId,
+                                    actualResult.timeVN || getVietnamTimeNow()
+                                );
 
                         // Cập nhật file combined performance 
-                        updateCombinedPerformanceFile(
-                            fileConfig,
-                            index,
+                            updateCombinedPerformanceFile(
+                                fileConfig,
+                                index,
                             previousPrediction.limit,
                             previousPrediction.prediction,
-                            actualNumber,
-                            actualResult.drawId,
-                            actualResult.timeVN || getVietnamTimeNow()
-                        );
+                                actualNumber,
+                                actualResult.drawId,
+                                actualResult.timeVN || getVietnamTimeNow()
+                            );
                     }
                 }
             } catch (error) {
@@ -292,7 +391,7 @@ async function predictNumbers(history, index = 0, limit = { limitList: [5, 10, 1
 
         // Ghi prediction mới
         fs.writeFileSync(predictionFilePath, JSON.stringify(finalResult, null, 2));
-
+        
         return finalResult;
     } catch (error) {
         if (log) console.error("Lỗi trong predictNumbers:", error);
@@ -549,8 +648,8 @@ function predictWithLimit(history, index, limit) {
     }
 
     // Tính toán kết quả
-    let weightedSum = 0;
-    let totalWeight = 0;
+        let weightedSum = 0;
+        let totalWeight = 0;
     const validPredictions = [];
 
     for (const pred of predictions) {
@@ -573,7 +672,7 @@ function predictWithLimit(history, index, limit) {
     } else {
         finalNumber = getLuckyNumberInRange(0, 9);
     }
-
+    
     // Đếm votes
     const votes = {
         'tài': predictions
@@ -785,7 +884,7 @@ function anomalyFilterPredictor(history, index = 0) {
     // Nếu 5 kết quả gần nhất có xu hướng mạnh (80%+), tiếp tục xu hướng
     if (recent5.length >= 5) {
         if (recent5Tai >= 4) { // 80%+ Tài, dự đoán tiếp tục Tài
-            return getLuckyNumberInRange(5, 9);
+        return getLuckyNumberInRange(5, 9);
         } else if (recent5Tai <= 1) { // 80%+ Xỉu, dự đoán tiếp tục Xỉu
             return getLuckyNumberInRange(0, 4);
         }
@@ -822,44 +921,44 @@ function anomalyFilterPredictor(history, index = 0) {
 function enhancedTrendReversalPredictor(history, index = 0, limit = null) {
     const recentNumbers = history.map(item => getNumberFromHistory(item, index))
         .filter(num => num !== null);
-
+        
     if (recentNumbers.length < 5) return null;
-
+    
     const taiXiuSeries = recentNumbers.map(n => n >= 5);
-
+    
     // Phân tích chuỗi liên tiếp
     let currentStreak = 1;
     for (let i = 1; i < taiXiuSeries.length; i++) {
         if (taiXiuSeries[i] === taiXiuSeries[0]) currentStreak++;
         else break;
     }
-
+    
     // Phân tích xu hướng dài hạn (10 chu kỳ)
     const longTermTrend = taiXiuSeries.slice(0, 10);
     const taiCount = longTermTrend.filter(Boolean).length;
     const xiuCount = longTermTrend.length - taiCount;
-
+    
     // Nếu có bất thường về phân phối (>70% một loại), dự đoán đảo chiều
     if (taiCount > xiuCount * 2) return getLuckyNumberInRange(0, 4);
     if (xiuCount > taiCount * 2) return getLuckyNumberInRange(5, 9);
-
+    
     // Dự đoán dựa vào độ dài chuỗi
     if (currentStreak >= 3) {
-        // Chuỗi càng dài, khả năng đảo chiều càng cao
-        const reverseProb = 0.5 + (currentStreak - 3) * 0.1; // 3->0.5, 4->0.6, 5->0.7...
-        return Math.random() < reverseProb ?
+        // Tăng khả năng phát hiện đảo chiều khi có quá nhiều kết quả liên tiếp
+        const reverseProb = 0.6 + (currentStreak - 3) * 0.15; // Tăng từ 0.5 lên 0.6 và tăng hệ số từ 0.1 lên 0.15
+        return Math.random() < reverseProb ? 
             (taiXiuSeries[0] ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9)) :
             (taiXiuSeries[0] ? getLuckyNumberInRange(5, 9) : getLuckyNumberInRange(0, 4));
     }
-
+    
     // Nếu không có xu hướng rõ rệt, phân tích mẫu lặp lại
     const pattern = taiXiuSeries.slice(0, 5).map(b => b ? 'T' : 'X').join('');
-
+    
     // Tìm mẫu TXTXT hoặc XTXTX (mẫu luân phiên)
     if (pattern.match(/^(TX){2}T$/) || pattern.match(/^(XT){2}X$/)) {
         return pattern[0] === 'T' ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
     }
-
+    
     // Mặc định
     return taiXiuSeries[0] ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
 }
@@ -987,6 +1086,26 @@ function patternRecognitionPredictor(history, index = 0) {
         return getLuckyNumberInRange(5, 9);
     }
 
+    // Thêm vào hàm patternRecognitionPredictor
+    // Phát hiện sự thay đổi mẫu đột ngột (ví dụ: TTTXX hoặc XXXTTT)
+    if (binaryPattern.startsWith('TTT') && binaryPattern.substring(3, 5) === 'XX') {
+        // Phát hiện mẫu chuyển từ Tài sang Xỉu đột ngột
+        return getLuckyNumberInRange(0, 4); // Tiếp tục Xỉu
+    }
+    if (binaryPattern.startsWith('XXX') && binaryPattern.substring(3, 5) === 'TT') {
+        // Phát hiện mẫu chuyển từ Xỉu sang Tài đột ngột
+        return getLuckyNumberInRange(5, 9); // Tiếp tục Tài
+    }
+
+    // Xử lý mẫu TXTXT hoặc XTXTX tốt hơn
+    if (binaryPattern.startsWith('TXTX') || binaryPattern.startsWith('XTXT')) {
+        // Mẫu luân phiên - tiếp tục mẫu luân phiên
+        console.log("Phát hiện mẫu luân phiên, dự đoán tiếp tục luân phiên");
+        return binaryPattern[0] !== binaryPattern[2] ? 
+            (binaryPattern[0] === 'T' ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9)) : 
+            (binaryPattern[0] === 'T' ? getLuckyNumberInRange(5, 9) : getLuckyNumberInRange(0, 4));
+    }
+
     return null; // Không tìm thấy mẫu nào phù hợp
 }
 
@@ -997,7 +1116,7 @@ function updateLimitPerformanceFile(fileConfig, index, limit, predictedNumber, a
     }
 
     const fs = require('fs');
-
+    
     // Cập nhật file performance cho limit cụ thể
     const limitPath = `${fileConfig[0]}_index${index}_limit${limit.limitMain}.performance`;
     const resultType = predictedNumber >= 5 ? "Tài" : "Xỉu";
@@ -1025,7 +1144,7 @@ function updateCombinedPerformanceFile(fileConfig, index, bestLimit, predictedNu
     }
 
     const fs = require('fs');
-
+    
     const resultType = predictedNumber >= 5 ? "Tài" : "Xỉu";
     const actualType = actualNumber >= 5 ? "Tài" : "Xỉu";
     const isCorrect = (predictedNumber >= 5) === (actualNumber >= 5);
@@ -1045,63 +1164,7 @@ function updateCombinedPerformanceFile(fileConfig, index, bestLimit, predictedNu
     }
 }
 
-// Hàm phân tích dữ liệu từ file performance
-function analyzeActualResults(performanceFile) {
-    const fs = require('fs');
-    const content = fs.readFileSync(performanceFile, 'utf8');
-    const lines = content.split('\n').filter(line => line.includes('Chu kỳ |'));
 
-    // Chỉ lấy số thực tế từ mỗi dòng
-    const actualNumbers = lines.map(line => {
-        const match = line.match(/Số thực tế: (\d+) \((Tài|Xỉu)\)/);
-        if (match) {
-            return {
-                number: parseInt(match[1]),
-                type: match[2]
-            };
-        }
-        return null;
-    }).filter(item => item !== null);
-
-    return actualNumbers;
-}
-
-// Phân tích xu hướng từ kết quả thực tế
-function analyzeActualTrends(numbers) {
-    if (numbers.length < 5) return null;
-
-    // Phân tích chuỗi liên tiếp
-    let taiStreak = 0, xiuStreak = 0;
-    let maxTaiStreak = 0, maxXiuStreak = 0;
-
-    for (const item of numbers) {
-        if (item.type === 'Tài') {
-            taiStreak++;
-            xiuStreak = 0;
-            maxTaiStreak = Math.max(maxTaiStreak, taiStreak);
-        } else {
-            xiuStreak++;
-            taiStreak = 0;
-            maxXiuStreak = Math.max(maxXiuStreak, xiuStreak);
-        }
-    }
-
-    // Phân tích phân phối
-    const taiCount = numbers.filter(n => n.type === 'Tài').length;
-    const xiuCount = numbers.length - taiCount;
-    const taiRatio = taiCount / numbers.length;
-
-    return {
-        currentType: numbers[0].type,
-        currentStreak: numbers[0].type === 'Tài' ? taiStreak : xiuStreak,
-        maxTaiStreak,
-        maxXiuStreak,
-        taiRatio,
-        xiuRatio: 1 - taiRatio,
-        // Phân tích 5 kết quả gần đây
-        recentResults: numbers.slice(0, 5).map(n => n.type)
-    };
-}
 
 // Cải thiện Markov predictor dựa trên kết quả thực tế
 function improvedMarkovPredictor(history, index = 0) {
@@ -1111,53 +1174,53 @@ function improvedMarkovPredictor(history, index = 0) {
         const num = Number(item.numbers[index]);
         return !isNaN(num) ? { number: num, type: num >= 5 ? 'Tài' : 'Xỉu' } : null;
     }).filter(n => n !== null);
-
+    
     if (actualNumbers.length < 5) return null;
-
+    
     // Phân tích transition patterns từ dữ liệu thực tế
     const transitions = {
         'Tài': { 'Tài': 0, 'Xỉu': 0 },
         'Xỉu': { 'Tài': 0, 'Xỉu': 0 }
     };
-
+    
     for (let i = 0; i < actualNumbers.length - 1; i++) {
         const current = actualNumbers[i].type;
         const next = actualNumbers[i + 1].type;
         transitions[current][next]++;
     }
-
+    
     // Xác định xu hướng hiện tại
     const currentType = actualNumbers[0].type;
     const total = transitions[currentType]['Tài'] + transitions[currentType]['Xỉu'];
-
+    
     if (total === 0) return getLuckyNumberInRange(0, 9);
-
+    
     // Xác suất chuyển tiếp
     const probTai = transitions[currentType]['Tài'] / total;
     const probXiu = transitions[currentType]['Xỉu'] / total;
-
+    
     // Xác định xu hướng rõ rệt (ngưỡng 0.65)
     if (probTai > 0.65) {
         return getLuckyNumberInRange(5, 9); // Dự đoán Tài
     } else if (probXiu > 0.65) {
         return getLuckyNumberInRange(0, 4); // Dự đoán Xỉu
     }
-
+    
     // Phân tích streak
     let streak = 1;
     for (let i = 1; i < actualNumbers.length; i++) {
         if (actualNumbers[i].type === currentType) streak++;
         else break;
     }
-
+    
     // Nếu có streak dài (3+), có xác suất cao sẽ đảo chiều
     if (streak >= 3) {
-        return currentType === 'Tài' ?
+        return currentType === 'Tài' ? 
             getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
     }
-
+    
     // Dự đoán theo xu hướng gần đây
-    return currentType === 'Tài' ?
+    return currentType === 'Tài' ? 
         getLuckyNumberInRange(5, 9) : getLuckyNumberInRange(0, 4);
 }
 

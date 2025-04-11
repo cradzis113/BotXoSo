@@ -1,38 +1,46 @@
 {
   "markov": {
-    "correct": 8,
-    "total": 12
+    "correct": 15,
+    "total": 33
   },
   "trend": {
-    "correct": 5,
-    "total": 12
+    "correct": 16,
+    "total": 33
   },
   "anomaly": {
-    "correct": 7,
-    "total": 12
+    "correct": 14,
+    "total": 33
   },
   "timeseries": {
-    "correct": 10,
-    "total": 12
+    "correct": 19,
+    "total": 31
   },
   "gametheory": {
-    "correct": 4,
-    "total": 12
+    "correct": 12,
+    "total": 31
   },
   "adaptive": {
-    "correct": 8,
-    "total": 12
+    "correct": 13,
+    "total": 33
   },
   "recent_trend": {
-    "correct": 8,
-    "total": 12
+    "correct": 22,
+    "total": 33
+  },
+  "trend_continuation": {
+    "correct": 4,
+    "total": 6
+  },
+  "reverse_decision": {
+    "correct": 1,
+    "total": 1
+  },
+  "dominant_trend": {
+    "correct": 11,
+    "total": 21
   },
   "pattern": {
     "correct": 2,
-    "total": 2
-  },
-  "dominant_trend": {
-    "correct": 4,
-    "total": 6
+    "total": 5
   }
 }

@@ -1,0 +1,11 @@
+# File Performance Tổng Hợp - Theo Dõi Kết Quả Dự Đoán Với Tất Cả Các Limit
+
+Chu kỳ | 202504121350 | 12/04/2025 11:52:44 PM | Số thực tế: 5 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Limit: 5 | Sai
+Chu kỳ | 202504121351 | 12/04/2025 11:53:30 PM | Số thực tế: 1 (Xỉu) | Số dự đoán: 9 (Tài) | Vị trí: 0 | Limit: 5 | Sai
+Chu kỳ | 202504121352 | 12/04/2025 11:54:14 PM | Số thực tế: 9 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Limit: 5 | Sai
+Chu kỳ | 202504121353 | 12/04/2025 11:55:00 PM | Số thực tế: 7 (Tài) | Số dự đoán: 8 (Tài) | Vị trí: 0 | Limit: 10 | Đúng
+Chu kỳ | 202504121355 | 12/04/2025 11:56:29 PM | Số thực tế: 6 (Tài) | Số dự đoán: 5 (Tài) | Vị trí: 0 | Limit: 10 | Đúng
+Chu kỳ | 202504121356 | 12/04/2025 11:57:15 PM | Số thực tế: 0 (Xỉu) | Số dự đoán: 8 (Tài) | Vị trí: 0 | Limit: 12 | Sai
+Chu kỳ | 202504121357 | 12/04/2025 11:58:00 PM | Số thực tế: 9 (Tài) | Số dự đoán: 2 (Xỉu) | Vị trí: 0 | Limit: 12 | Sai
+Chu kỳ | 202504121358 | 12/04/2025 11:58:45 PM | Số thực tế: 7 (Tài) | Số dự đoán: 4 (Xỉu) | Vị trí: 0 | Limit: 15 | Sai
+Chu kỳ | 202504121359 | 12/04/2025 11:59:29 PM | Số thực tế: 0 (Xỉu) | Số dự đoán: 1 (Xỉu) | Vị trí: 0 | Limit: 15 | Đúng

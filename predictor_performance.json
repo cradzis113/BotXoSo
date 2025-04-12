@@ -1,0 +1,58 @@
+{
+  "markov": {
+    "correct": 5,
+    "total": 8
+  },
+  "trend": {
+    "correct": 5,
+    "total": 8
+  },
+  "anomaly": {
+    "correct": 3,
+    "total": 8
+  },
+  "adaptive": {
+    "correct": 4,
+    "total": 8
+  },
+  "ensemble": {
+    "correct": 2,
+    "total": 4
+  },
+  "recent": {
+    "correct": 4,
+    "total": 8
+  },
+  "quickadaptive": {
+    "correct": 4,
+    "total": 8
+  },
+  "learning": {
+    "correct": 4,
+    "total": 8
+  },
+  "recent_trend": {
+    "correct": 4,
+    "total": 8
+  },
+  "timeseries": {
+    "correct": 3,
+    "total": 6
+  },
+  "gametheory": {
+    "correct": 4,
+    "total": 6
+  },
+  "alternating": {
+    "correct": 0,
+    "total": 2
+  },
+  "pattern": {
+    "correct": 1,
+    "total": 2
+  },
+  "numberpred": {
+    "correct": 0,
+    "total": 2
+  }
+}

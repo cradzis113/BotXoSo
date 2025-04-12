@@ -1,0 +1,96 @@
+{
+  "prediction": 3,
+  "type": "Xỉu",
+  "limit": 10,
+  "score": "100.00%",
+  "timestamp": "2025-04-12T16:59:29.782Z",
+  "timeVN": "12/04/2025 11:59:29 PM",
+  "drawId": "202504121360",
+  "votes": {
+    "tài": 1.7,
+    "xỉu": 0.4
+  },
+  "strategies": [
+    "Sử dụng Markov Chain",
+    "Phân tích xu hướng đảo chiều",
+    "Phát hiện bất thường",
+    "Phân tích chuỗi thời gian",
+    "Lý thuyết trò chơi",
+    "Mô hình học máy đơn giản với Logistic Regression",
+    "Mô hình bỏ phiếu tổng hợp",
+    "Xu hướng ngắn hạn gần nhất",
+    "Thích nghi nhanh dựa trên xu hướng gần nhất",
+    "Học máy từ kết quả thực tế và lịch sử",
+    "Dự đoán đảo chiều sau chuỗi dài",
+    "Xu hướng gần đây"
+  ],
+  "indexPredicted": 0,
+  "predictorDetails": [
+    {
+      "name": "markov",
+      "value": 8,
+      "weight": 0.15,
+      "type": "Tài"
+    },
+    {
+      "name": "trend",
+      "value": 8,
+      "weight": 0.05,
+      "type": "Tài"
+    },
+    {
+      "name": "anomaly",
+      "value": 3,
+      "weight": 0.1,
+      "type": "Xỉu"
+    },
+    {
+      "name": "timeseries",
+      "value": 8,
+      "weight": 0.15,
+      "type": "Tài"
+    },
+    {
+      "name": "gametheory",
+      "value": 8,
+      "weight": 0.2,
+      "type": "Tài"
+    },
+    {
+      "name": "adaptive",
+      "value": 7,
+      "weight": 0.25,
+      "type": "Tài"
+    },
+    {
+      "name": "ensemble",
+      "value": 8,
+      "weight": 0.1,
+      "type": "Tài"
+    },
+    {
+      "name": "recent",
+      "value": 8,
+      "weight": 0.1,
+      "type": "Tài"
+    },
+    {
+      "name": "quickadaptive",
+      "value": 8,
+      "weight": 0.4,
+      "type": "Tài"
+    },
+    {
+      "name": "learning",
+      "value": 3,
+      "weight": 0.3,
+      "type": "Xỉu"
+    },
+    {
+      "name": "recent_trend",
+      "value": 8,
+      "weight": 0.3,
+      "type": "Tài"
+    }
+  ]
+}

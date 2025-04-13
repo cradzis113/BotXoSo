@@ -434,7 +434,7 @@ async function predictNumbers(history, index = 0, limit = { limitList: [3, 5, 10
         // Kiểm tra bias trong hệ thống và điều chỉnh trọng số nếu cần
         const bias = getModelBias();
         if (bias !== "Balanced") {
-            if (log) console.log(`Phát hiện bias hệ thống về ${bias} - điều chỉnh trọng số`);
+            console.log(`Phát hiện bias hệ thống về ${bias} - điều chỉnh trọng số`);
             
             // Tăng trọng số cho các model ngược xu hướng
             if (bias === "Tài") {
@@ -447,7 +447,9 @@ async function predictNumbers(history, index = 0, limit = { limitList: [3, 5, 10
         }
 
         // Đảo chiều dự đoán khi đang buổi tối
-        if (currentHour >= 22 || currentHour < 1) {
+        const now = new Date();
+        const hour = now.getHours();
+        if (hour >= 22 || hour < 1) {
             const flipChance = 0.7; // 70% đảo chiều
             if (Math.random() < flipChance) {
                 finalResult.prediction = finalResult.prediction >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);

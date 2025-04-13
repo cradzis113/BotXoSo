@@ -1,14 +1,14 @@
 {
-  "prediction": 3,
+  "prediction": 0,
   "type": "Xỉu",
-  "limit": 10,
-  "score": "100.00%",
-  "timestamp": "2025-04-12T16:59:29.782Z",
-  "timeVN": "12/04/2025 11:59:29 PM",
-  "drawId": "202504121360",
+  "limit": 15,
+  "score": "130.00%",
+  "timestamp": "2025-04-13T04:42:17.202Z",
+  "timeVN": "13/04/2025 11:42:17 AM",
+  "drawId": "202504130377",
   "votes": {
-    "tài": 1.7,
-    "xỉu": 0.4
+    "tài": 1.3,
+    "xỉu": 1.05
   },
   "strategies": [
     "Sử dụng Markov Chain",
@@ -17,10 +17,10 @@
     "Phân tích chuỗi thời gian",
     "Lý thuyết trò chơi",
     "Mô hình học máy đơn giản với Logistic Regression",
-    "Mô hình bỏ phiếu tổng hợp",
     "Xu hướng ngắn hạn gần nhất",
     "Thích nghi nhanh dựa trên xu hướng gần nhất",
     "Học máy từ kết quả thực tế và lịch sử",
+    "Dự đoán dựa trên phân tích số thực tế",
     "Dự đoán đảo chiều sau chuỗi dài",
     "Xu hướng gần đây"
   ],
@@ -28,67 +28,67 @@
   "predictorDetails": [
     {
       "name": "markov",
-      "value": 8,
+      "value": 0,
       "weight": 0.15,
-      "type": "Tài"
-    },
-    {
-      "name": "trend",
-      "value": 8,
-      "weight": 0.05,
-      "type": "Tài"
-    },
-    {
-      "name": "anomaly",
-      "value": 3,
-      "weight": 0.1,
       "type": "Xỉu"
     },
     {
+      "name": "trend",
+      "value": 0,
+      "weight": 0.05,
+      "type": "Xỉu"
+    },
+    {
+      "name": "anomaly",
+      "value": 5,
+      "weight": 0.1,
+      "type": "Tài"
+    },
+    {
       "name": "timeseries",
-      "value": 8,
-      "weight": 0.15,
+      "value": 5,
+      "weight": 0.1,
       "type": "Tài"
     },
     {
       "name": "gametheory",
-      "value": 8,
+      "value": 0,
       "weight": 0.2,
-      "type": "Tài"
+      "type": "Xỉu"
     },
     {
       "name": "adaptive",
-      "value": 7,
-      "weight": 0.25,
-      "type": "Tài"
-    },
-    {
-      "name": "ensemble",
-      "value": 8,
-      "weight": 0.1,
-      "type": "Tài"
+      "value": 4,
+      "weight": 0.35,
+      "type": "Xỉu"
     },
     {
       "name": "recent",
-      "value": 8,
+      "value": 5,
       "weight": 0.1,
       "type": "Tài"
     },
     {
       "name": "quickadaptive",
-      "value": 8,
+      "value": 5,
       "weight": 0.4,
       "type": "Tài"
     },
     {
       "name": "learning",
-      "value": 3,
+      "value": 0,
       "weight": 0.3,
       "type": "Xỉu"
     },
     {
-      "name": "recent_trend",
+      "name": "numberpred",
       "value": 8,
+      "weight": 0.3,
+      "type": "Tài"
+    },
+    {
+      "name": "recent_trend",
+      "value": 5,
       "weight": 0.3,
       "type": "Tài"
     }

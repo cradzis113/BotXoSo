@@ -446,6 +446,14 @@ async function predictNumbers(history, index = 0, limit = { limitList: [3, 5, 10
             }
         }
 
+        // Đảo chiều dự đoán khi đang buổi tối
+        if (currentHour >= 22 || currentHour < 1) {
+            const flipChance = 0.7; // 70% đảo chiều
+            if (Math.random() < flipChance) {
+                finalResult.prediction = finalResult.prediction >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
+            }
+        }
+
         return finalResult;
     } catch (error) {
         if (log) console.error("Lỗi trong predictNumbers:", error);
@@ -573,6 +581,14 @@ function predictWithLimit(history, index, limit, log = false) {
 
     // Điều chỉnh trọng số (nếu có)
     // ... (giữ nguyên)
+
+    // Trong hàm predictWithLimit
+    if (currentHour >= 22 || currentHour < 1) { // 10PM - 1AM
+        weights.timebased = 0.35;  // Tăng từ 0.25 lên 0.35
+        weights.streakrev = 0.30;  // Tăng mô hình đảo chiều
+        weights.adaptive = 0.35;   // Tăng mô hình thích nghi
+        weights.timeseries = 0.10; // Giảm trọng số cho mô hình thống kê
+    }
 
     // Quan trọng: tạo tất cả các biến predictor TRƯỚC KHI sử dụng chúng
     const timeOfDayPred = timeOfDayPredictor(limitedHistory, index, log);
@@ -1321,16 +1337,15 @@ function timeBasedPredictor(history, index = 0) {
         }
 
         // Buổi tối: Cao điểm, nhiều người chơi, thường tuân theo quy luật xác suất
-        if (timeSegment === "tối") {
-            // Phân tích xu hướng dài (20 kết quả)
-            const recent20 = history.slice(0, Math.min(20, history.length))
-                .map(item => getNumberFromHistory(item, index));
-            const taiCount = recent20.filter(n => n >= 5).length;
-            const taiRatio = taiCount / recent20.length;
-
-            // Nếu tỷ lệ Tài/Xỉu lệch xa 50/50, có xu hướng hồi quy về trung bình
-            if (taiRatio > 0.6) return getLuckyNumberInRange(0, 4);
-            if (taiRatio < 0.4) return getLuckyNumberInRange(5, 9);
+        if (timeSegment === "tối" || (currentHour >= 22 || currentHour < 1)) {
+            // Buổi tối: Can thiệp cao, xu hướng thường thay đổi nhanh
+            // Ưu tiên đảo chiều sau mỗi chu kỳ
+            const recentNums = history.slice(0, 3).map(item => getNumberFromHistory(item, index));
+            const recentNumsCount = recentNums.filter(n => n !== null).length;
+            if (recentNumsCount < 3) return null;
+            const recentNumsSum = recentNums.reduce((sum, n) => sum + n, 0);
+            const recentNumsAvg = recentNumsSum / recentNumsCount;
+            return recentNumsAvg >= 5 ? getLuckyNumberInRange(0, 4) : getLuckyNumberInRange(5, 9);
         }
     } catch (error) {
         console.error("Lỗi khi phân tích theo khung giờ:", error);

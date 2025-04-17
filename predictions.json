@@ -1,0 +1,23 @@
+{
+  "drawId": "202504170426",
+  "numbers": [
+    4,
+    2,
+    2,
+    1,
+    8
+  ],
+  "detail": {
+    "index": 0,
+    "prediction": 4,
+    "bestLimit": 15,
+    "bestAccuracy": 45,
+    "bestLimitAnalysis": {
+      "taiCount": 8,
+      "xiuCount": 7,
+      "taiPercentage": 53,
+      "accuracy": 45
+    }
+  },
+  "timestamp": "2025-04-17T05:19:01.677Z"
+}

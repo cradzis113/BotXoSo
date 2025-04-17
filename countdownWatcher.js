@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer-core');
 const getLotteryNumbers = require('./getLotteryNumbers')
-const predictNumbers = require('./predict')
+const predict = require('./predict')
 
 async function watchCountdown() {
   const browser = await puppeteer.launch({
@@ -60,8 +60,8 @@ async function watchCountdown() {
         hasPredicted = true;  // Set flag to true after prediction
         try {
           const history = await getLotteryNumbers()
-          const arrays = await predictNumbers(history, 0, { limitList: [5, 10, 12, 15], limitMain: 15 }, ["taixiu_history", true], true);
-          console.log(arrays.prediction)
+          const arrays = await predict(history, 0, { limitList: [5, 10, 15], defaultLimit: 15 });
+          console.log(arrays)
 
         } catch (error) {
           console.error("Lỗi khi gọi predictNextNumber:", error);

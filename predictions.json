@@ -1,23 +1,23 @@
 {
-  "drawId": "202504170426",
+  "drawId": "202504171381",
   "numbers": [
+    8,
+    0,
     4,
-    2,
-    2,
-    1,
+    8,
     8
   ],
   "detail": {
     "index": 0,
-    "prediction": 4,
-    "bestLimit": 15,
-    "bestAccuracy": 45,
+    "prediction": 9,
+    "bestLimit": 10,
+    "bestAccuracy": 50,
     "bestLimitAnalysis": {
-      "taiCount": 8,
-      "xiuCount": 7,
-      "taiPercentage": 53,
-      "accuracy": 45
+      "taiCount": 7,
+      "xiuCount": 3,
+      "taiPercentage": 70,
+      "accuracy": 50
     }
   },
-  "timestamp": "2025-04-17T05:19:01.677Z"
+  "timestamp": "2025-04-17T17:15:24.828Z"
 }

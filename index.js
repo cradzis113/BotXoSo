@@ -2,12 +2,16 @@ const watchCountdown = require('./countdownWatcher');
 const connectDB = require('./service/database');
 const scraper = require('./scraper');
 const saveNumbers = require('./saveNumber');
+const telegramService = require('./service/telegram');
 
 async function main() {
   try {
     await connectDB();
     await scraper.initialize();
     await watchCountdown()
+
+    // const TELEGRAM_BOT_TOKEN = '8024013793:AAEa_LKd5dcKcl3YXJUnFWVrZNtKNgS51JE';
+    // telegramService.initialize(TELEGRAM_BOT_TOKEN);
 
     setInterval(async () => {
       try {

@@ -7,7 +7,9 @@
     "start": "nodemon index.js"
   },
   "nodemonConfig": {
-    "ignore": ["**/*.json"]
+    "ignore": [
+      "**/*.json"
+    ]
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +17,7 @@
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0",
     "mongoose": "^8.12.2",
+    "node-telegram-bot-api": "^0.66.0",
     "nodemon": "^3.1.9",
     "puppeteer-core": "^24.4.0"
   }

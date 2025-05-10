@@ -1,0 +1,26 @@
+{
+  "LongStreakPattern": {
+    "correct": 12,
+    "total": 29
+  },
+  "MarketVolatility": {
+    "correct": 0,
+    "total": 1
+  },
+  "EmergencyReversal": {
+    "correct": 0,
+    "total": 1
+  },
+  "ShortAlternatingPattern": {
+    "correct": 25,
+    "total": 50
+  },
+  "CyclicalPattern": {
+    "correct": 25,
+    "total": 50
+  },
+  "FastPatternDetector": {
+    "correct": 0,
+    "total": 1
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "username": "",
+  "password": "",
+  "betting": {
+    "enabled": false,
+    "demoMode": true,
+    "accountBalance": 500219480,
+    "baseBetAmount": 20000,
+    "currentBalance": 0,
+    "strategy": "martingale",
+    "maxMultiplier": 6,
+    "consecutiveLosses": 0,
+    "lastBetAmount": 320000,
+    "disabledReason": "Đã đạt Stop Loss: -360.000đ",
+    "disabledAt": "2025-05-10T06:14:10.967Z",
+    "stopLoss": -200000,
+    "takeProfit": 300000,
+    "resetAfterTP": true,
+    "resetAfterSL": true
+  }
+}

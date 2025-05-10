@@ -1,0 +1,23 @@
+{
+  "drawId": "202505101368",
+  "numbers": [
+    7,
+    7,
+    2,
+    5,
+    9
+  ],
+  "timestamp": "2025-05-10T17:05:56.428Z",
+  "method": "ShortAlternatingPattern",
+  "reasonDetail": "Phát hiện mẫu xen kẽ hoàn hảo \"TXT\", dự đoán tiếp theo là T",
+  "confidence": 0.44164811745204813,
+  "reasonShort": "TÀI",
+  "detail": {
+    "index": 0,
+    "prediction": 7,
+    "strategy": "ShortAlternatingPattern",
+    "reason": "Phát hiện mẫu xen kẽ hoàn hảo \"TXT\", dự đoán tiếp theo là T"
+  },
+  "version": "v4.0",
+  "shouldSkip": true
+}

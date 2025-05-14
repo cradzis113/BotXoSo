@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Đảm bảo có biến dirname
-const dirname = __dirname;
 
 const predictor = require('./predictor');
 const account = require('./account');
@@ -22,7 +20,6 @@ const {
     detectFastPattern,
     detectTimeBasedPattern,
     advancedCombinationPattern,
-    generateNumbers,
 } = predictor;
 
 const { 
@@ -35,7 +32,6 @@ const {
     predictFromPatterns,
     analyzeStatisticalPatterns,
     detectSpecialEvents,
-    updatePatternPerformance,
     calculateRecentAccuracy
 } = adaptiveLearning;
 
@@ -51,13 +47,6 @@ let isLoggedIn = false;
 
 // Thêm biến toàn cục để theo dõi hiệu suất một cách đơn giản
 let methodPerformanceCache = {};
-
-// Biến lưu trữ dự đoán gần đây nhất
-let lastPredictionData = {
-    prediction: null,
-    confidence: 0,
-    timestamp: 0
-};
 
 // Thêm hàm để cập nhật hiệu suất trong bộ nhớ (không lưu file)
 function updateMethodPerformance(method, isCorrect) {
@@ -252,7 +241,6 @@ async function predict(page, history, index = 0, log = true) {
                 }
             }
 
-            const recentResults = logger.analyzeRecentResults(historyLogFile, 15);
 
             if (isLoggedIn && canBet) {
                 betting.processPreviousPrediction(predictionsFile, historyLogFile, history, accountInfo, log);
@@ -265,7 +253,6 @@ async function predict(page, history, index = 0, log = true) {
 
             // Trích xuất danh sách kỳ từ lịch sử
             const historyLimitOverride = config.analysis.historyLimit;
-            const historyLimit = historyLimitOverride || config.analysis.historyLimit;
             
             // Tạo dự đoán bằng các phương pháp khác nhau
             const predictions = [];
@@ -514,7 +501,6 @@ async function predict(page, history, index = 0, log = true) {
             }
             
             // Theo dõi nếu có phương pháp nào đã bị đảo ngược dự đoán
-            let methodWasReversed = false;
             
             if (highConfidencePredictions.length > 0) {
                 // Tính toán điểm kết hợp cho mỗi dự đoán có độ tin cậy cao
@@ -676,7 +662,8 @@ async function predict(page, history, index = 0, log = true) {
                 numbers: predictedNumbers,
                 predictedValue: predictedValue, // Số dự đoán tại vị trí index
                 targetIndex: index, // Giữ lại vì quan trọng để biết vị trí nào đang dự đoán
-                timeSegment: currentTimeSegment
+                timeSegment: currentTimeSegment,
+                version: config.version // Thêm phiên bản từ config
             };
             
             // Thêm tiền cược nếu có đăng nhập và được phép cược
@@ -1066,36 +1053,6 @@ function updateAllPendingPredictions(history, log = true) {
     }
 }
 
-/**
- * Lấy hướng dự đoán từ log gần đây nhất
- * @param {string} logFile - Đường dẫn đến file log
- * @returns {boolean|null} true cho Tài, false cho Xỉu, null nếu không tìm thấy
- */
-function getPreviousPredictionDirection(logFile) {
-    try {
-        if (!fs.existsSync(logFile)) return null;
-        
-        const data = fs.readFileSync(logFile, 'utf8');
-        const lines = data.split('\n').filter(line => line.trim() !== '');
-        
-        // Chỉ lấy dòng gần nhất
-        if (lines.length > 0) {
-            const lastLine = lines[0]; // Dòng đầu tiên là gần nhất
-            
-            // Tìm loại dự đoán
-            const predictionMatch = lastLine.match(/Dự đoán: \d+ \((Tài|Xỉu)\)/);
-            if (predictionMatch && predictionMatch[1]) {
-                return predictionMatch[1] === 'Tài';
-            }
-        }
-        
-        return null;
-    } catch (error) {
-        console.error(`Lỗi khi đọc log để lấy hướng dự đoán: ${error.message}`);
-        return null;
-    }
-}
-
 // Tạo các hàm toàn cục để các module khác có thể truy cập
 global.verifyPrediction = verifyPrediction;
 global.updateMethodPerformance = updateMethodPerformance;
@@ -1107,6 +1064,5 @@ module.exports = {
     verifyPrediction,
     updateMethodPerformance,
     getMethodSuccessRate,
-    updateAllPendingPredictions,
-    getPreviousPredictionDirection
+    updateAllPendingPredictions
 };

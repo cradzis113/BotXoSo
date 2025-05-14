@@ -11,15 +11,6 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 
-// Biến lưu trữ hiệu suất theo thời gian
-const timeSegmentStats = {
-    morning: { total: 0, correct: 0, lastTai: 0, lastXiu: 0 },
-    noon: { total: 0, correct: 0, lastTai: 0, lastXiu: 0 },
-    afternoon: { total: 0, correct: 0, lastTai: 0, lastXiu: 0 },
-    evening: { total: 0, correct: 0, lastTai: 0, lastXiu: 0 },
-    latenight: { total: 0, correct: 0, lastTai: 0, lastXiu: 0 }
-};
-
 // Cache cho phân tích dữ liệu
 let timeAnalysisCache = {
     predictions: {},
@@ -200,35 +191,6 @@ function predictFromTimeAnalysis(logFile) {
 }
 
 /**
- * Cập nhật hiệu suất theo thời gian
- * @param {Object} prediction - Dự đoán đã thực hiện
- * @param {boolean} isCorrect - Kết quả dự đoán đúng hay sai
- * @param {boolean} isTai - Dự đoán là Tài hay Xỉu
- */
-function updateTimePerformance(prediction, isCorrect, isTai) {
-    if (!prediction || prediction.method !== "TimeAnalysis") {
-        return;
-    }
-    
-    const segment = getCurrentTimeSegment();
-    timeSegmentStats[segment].total++;
-    
-    if (isCorrect) {
-        timeSegmentStats[segment].correct++;
-    }
-    
-    if (isTai) {
-        timeSegmentStats[segment].lastTai = isCorrect ? 
-            timeSegmentStats[segment].lastTai + 1 : 0;
-        timeSegmentStats[segment].lastXiu = 0;
-    } else {
-        timeSegmentStats[segment].lastXiu = isCorrect ? 
-            timeSegmentStats[segment].lastXiu + 1 : 0;
-        timeSegmentStats[segment].lastTai = 0;
-    }
-}
-
-/**
  * Xác định khung giờ khó khăn (hiệu suất thấp)
  * @param {string} logFile - Đường dẫn đến file log dự đoán
  * @param {number} sampleSize - Số lượng mẫu để xác định (mặc định là 20)
@@ -289,7 +251,6 @@ module.exports = {
     getCurrentTimeSegment,
     analyzeTimePerformance,
     predictFromTimeAnalysis,
-    updateTimePerformance,
     isDifficultPeriod,
     getRecentAccuracy
 }; 

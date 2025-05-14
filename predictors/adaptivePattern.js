@@ -223,69 +223,119 @@ function analyzeSpecialPatterns(pattern) {
 }
 
 /**
- * Phát hiện và xử lý chuỗi thất bại liên tiếp
- * @param {Array} pattern - Mảng mẫu T/X
- * @param {Array} predictions - Lịch sử dự đoán gần đây
+ * Phát hiện và xử lý các chuỗi kết quả hoặc chuỗi dự đoán
+ * @param {Array} pattern - Mẫu kết quả gần đây (T/X)
+ * @param {Array} predictions - Các dự đoán gần đây
  * @returns {Object} Kết quả xử lý
  */
 function detectAndHandleStreaks(pattern, predictions) {
-    if (!predictions || predictions.length < 3) {
+    if (!pattern || pattern.length < 3) {
         return { confidence: 0 };
     }
     
-    // Đếm số lần dự đoán sai liên tiếp
-    let consecutiveFailures = 0;
-    for (let i = 0; i < predictions.length; i++) {
-        if (predictions[i].success === false) {
-            consecutiveFailures++;
+    // ----- PHẦN MỚI: KIỂM TRA CHUỖI DỰ ĐOÁN TRỞ NÊN "BỆT" -----
+    // Xử lý khi có ít nhất 3 dự đoán gần đây
+    if (predictions && predictions.length >= 3) {
+        // Lấy ra loại dự đoán gần đây nhất
+        const recentPredictionTypes = predictions.slice(0, 5).map(p => p.predictTai ? 'T' : 'X');
+        
+        // Kiểm tra xem có đang dự đoán cùng một loại liên tục không
+        let consecutiveSamePredictions = 1;
+        for (let i = 1; i < recentPredictionTypes.length; i++) {
+            if (recentPredictionTypes[i] === recentPredictionTypes[0]) {
+                consecutiveSamePredictions++;
+            } else {
+                break;
+            }
+        }
+        
+        // Nếu đang dự đoán cùng một loại nhiều lần liên tiếp (3+)
+        if (consecutiveSamePredictions >= 3) {
+            const predictionType = recentPredictionTypes[0];
+            
+            // Kiểm tra xem kết quả thực tế gần đây có ngược lại với dự đoán không
+            let oppositeResultsCount = 0;
+            for (let i = 0; i < Math.min(3, pattern.length); i++) {
+                if ((predictionType === 'T' && pattern[i] === 'X') || 
+                    (predictionType === 'X' && pattern[i] === 'T')) {
+                    oppositeResultsCount++;
+                }
+            }
+            
+            // Nếu có 2+ kết quả thực tế trái ngược với loại dự đoán liên tục
+            if (oppositeResultsCount >= 2) {
+                console.log(`⚠️ Phát hiện ${consecutiveSamePredictions} dự đoán ${predictionType} liên tiếp nhưng có ${oppositeResultsCount} kết quả thực tế ngược lại`);
+                
+                return {
+                    predictTai: predictionType !== 'T', // Đảo ngược loại dự đoán hiện tại
+                    confidence: 0.82,
+                    method: "AdaptivePattern_BreakPredictionStreak",
+                    streakType: `Break${predictionType}Streak`,
+                    reason: `Đảo chiều sau ${consecutiveSamePredictions} dự đoán ${predictionType} liên tiếp nhưng có ${oppositeResultsCount} kết quả thực tế ngược lại`
+                };
+            }
+        }
+    }
+    // ----- KẾT THÚC PHẦN MỚI -----
+    
+    // Phân tích chuỗi kết quả gần đây
+    let currentStreakType = pattern[0];
+    let currentStreakLength = 1;
+    
+    // Đếm độ dài chuỗi hiện tại
+    for (let i = 1; i < pattern.length; i++) {
+        if (pattern[i] === currentStreakType) {
+            currentStreakLength++;
         } else {
             break;
         }
     }
     
-    if (consecutiveFailures >= config.streakBreaker.maxConsecutiveFailures) {
-        // Khi có chuỗi thất bại, đảo ngược dự đoán
-        const lastPrediction = predictions[0];
+    // Lưu vào cache để theo dõi
+    streakDetectionCache = {
+        type: currentStreakType,
+        length: currentStreakLength,
+        timestamp: Date.now()
+    };
+    
+    // ----- PHẦN MỚI: TĂNG CƯỜNG PHÁT HIỆN CÁC CHUỖI DÀI -----
+    if (currentStreakLength >= 4) {
+        const oppositeTaiXiu = currentStreakType === 'T' ? 'X' : 'T';
+        const confidenceByLength = Math.min(0.7 + (currentStreakLength - 4) * 0.05, 0.9);
         
-        if (config.streakBreaker.reverseAfterStreak) {
-            return {
-                predictTai: !lastPrediction.predictTai,
-                confidence: 0.78,
-                method: "AdaptivePattern_StreakBreaker",
-                reason: `Đảo chiều sau ${consecutiveFailures} lần dự đoán sai liên tiếp`,
-                streakType: "FailureReversal"
-            };
-        }
+        return {
+            predictTai: oppositeTaiXiu === 'T', // Đảo chiều sau chuỗi dài
+            confidence: confidenceByLength,
+            method: `AdaptivePattern_After${currentStreakType}Streak`,
+            streakType: `${currentStreakType}Streak`,
+            reason: `Sau ${currentStreakLength} lần ${currentStreakType === 'T' ? 'Tài' : 'Xỉu'} liên tiếp, dự đoán đảo chiều`
+        };
+    }
+    // ----- KẾT THÚC PHẦN MỚI -----
+    
+    // Xử lý chuỗi 3 kỳ liên tiếp
+    if (currentStreakLength === 3) {
+        console.log(`Phát hiện chuỗi ${currentStreakType} dài 3 kỳ`);
+        
+        return {
+            predictTai: currentStreakType === 'X', // Đảo chiều sau 3 kỳ liên tiếp
+            confidence: 0.78,
+            method: `AdaptivePattern_After${currentStreakType}3`,
+            streakType: `${currentStreakType}3`,
+            reason: `Sau 3 lần ${currentStreakType === 'T' ? 'Tài' : 'Xỉu'} liên tiếp, dự đoán đảo chiều`
+        };
     }
     
-    // Phát hiện chuỗi Tài/Xỉu dài
-    let taiStreak = 0;
-    let xiuStreak = 0;
-    
-    for (let i = 0; i < pattern.length; i++) {
-        if (pattern[i] === 'T') {
-            taiStreak++;
-            xiuStreak = 0;
-        } else {
-            xiuStreak++;
-            taiStreak = 0;
-        }
-        
-        if (taiStreak >= 4) {
+    // Phân tích mẫu TTX hoặc XXT trong 3 kỳ gần nhất
+    if (pattern.length >= 3) {
+        if (pattern[0] !== pattern[1] && pattern[1] === pattern[2]) {
+            // Mẫu TTX hoặc XXT
             return {
-                predictTai: false,
-                confidence: 0.82,
-                method: "AdaptivePattern_LongTaiStreak",
-                reason: `Phát hiện chuỗi ${taiStreak} Tài liên tiếp, dự đoán đảo chiều`,
-                streakType: "TaiStreak"
-            };
-        } else if (xiuStreak >= 4) {
-            return {
-                predictTai: true,
-                confidence: 0.82,
-                method: "AdaptivePattern_LongXiuStreak",
-                reason: `Phát hiện chuỗi ${xiuStreak} Xỉu liên tiếp, dự đoán đảo chiều`,
-                streakType: "XiuStreak"
+                predictTai: pattern[0] === 'T', // Dự đoán giống với kỳ mới nhất
+                confidence: 0.75,
+                method: "AdaptivePattern_RecentSwitch",
+                streakType: `Switch${pattern[0]}`,
+                reason: `Phát hiện mẫu ${pattern[2]}${pattern[1]}${pattern[0]}, dự đoán tiếp tục ${pattern[0]}`
             };
         }
     }

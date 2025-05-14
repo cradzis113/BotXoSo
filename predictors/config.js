@@ -9,18 +9,18 @@ const CONFIG = {
     
     // Trọng số cho các thuật toán - dựa trên phân tích hiệu suất
     defaultWeights: {
-        AdvancedCombination: 0.28,       // Giảm từ 0.30 xuống 0.28 (nhường trọng số cho các phương pháp mới)
-        ShortAlternatingPattern: 0.15,   // Giữ nguyên 0.15
-        CyclicalPattern: 0.13,           // Giảm từ 0.15 xuống 0.13
-        BetBreaker: 0.15,                // Giữ nguyên 0.15 (hiệu suất cao 83%)
-        BetStreakFollower: 0.10,         // Giữ nguyên 0.10
-        FastPatternDetector: 0.08,       // Giữ nguyên 0.08
-        TimeBasedPattern: 0.04,          // Giữ nguyên 0.04
-        LongStreakPattern: 0.03,         // Giữ nguyên 0.03
+        AdvancedCombination: 0.30,       // Tăng từ 0.28 lên 0.30 (phân bổ lại trọng số)
+        ShortAlternatingPattern: 0.16,   // Tăng từ 0.15 lên 0.16
+        CyclicalPattern: 0.14,           // Tăng từ 0.13 lên 0.14
+        BetBreaker: 0.16,                // Tăng từ 0.15 lên 0.16
+        BetStreakFollower: 0.11,         // Tăng từ 0.10 lên 0.11
+        FastPatternDetector: 0.09,       // Tăng từ 0.08 lên 0.09
+        TimeBasedPattern: 0.05,          // Tăng từ 0.04 lên 0.05
+        LongStreakPattern: 0.04,         // Tăng từ 0.03 lên 0.04
         AdaptivePatternRecognition: 0.00, // Giữ nguyên 0.00
-        TimeAnalysis: 0.02,              // Mới: 0.02
-        AdaptiveLearning: 0.01,          // Mới: 0.01 (khởi đầu thấp để tăng dần theo hiệu suất)
-        StatisticalRegression: 0.01      // Mới: 0.01 (khởi đầu thấp để tăng dần theo hiệu suất)
+        TimeAnalysis: 0.03,              // Tăng từ 0.02 lên 0.03
+        AdaptiveLearning: 0.01,          // Giữ nguyên 0.01
+        StatisticalRegression: 0.01      // Giữ nguyên 0.01
     },
     
     // Cấu hình phân tích

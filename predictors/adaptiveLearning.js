@@ -291,10 +291,17 @@ function updatePatternPerformance(prediction, isCorrect) {
  * Phân tích hiệu suất dự đoán gần đây
  * @param {string} logFile - Đường dẫn đến file log dự đoán
  * @param {Number} windowSize - Số kỳ xem xét (mặc định là 20)
- * @returns {Number} Tỷ lệ dự đoán đúng gần đây
+ * @param {Boolean} detailedInfo - Có trả về thông tin chi tiết hay không
+ * @returns {Number|Object} Tỷ lệ dự đoán đúng gần đây hoặc đối tượng thông tin chi tiết
  */
-function calculateRecentAccuracy(logFile, windowSize = 20) {
-    if (!fs.existsSync(logFile)) return 0.5;
+function calculateRecentAccuracy(logFile, windowSize = 20, detailedInfo = false) {
+    if (!fs.existsSync(logFile)) return detailedInfo ? { 
+        accuracy: 0.5, 
+        sampleSize: 0,
+        correctCount: 0,
+        methodStats: {},
+        recentTrend: 'unknown'
+    } : 0.5;
     
     try {
         const content = fs.readFileSync(logFile, 'utf8');
@@ -302,13 +309,120 @@ function calculateRecentAccuracy(logFile, windowSize = 20) {
             .filter(line => line.trim())
             .slice(0, windowSize);
         
-        if (lines.length === 0) return 0.5;
+        if (lines.length === 0) return detailedInfo ? { 
+            accuracy: 0.5, 
+            sampleSize: 0,
+            correctCount: 0,
+            methodStats: {},
+            recentTrend: 'unknown'
+        } : 0.5;
         
         const correctPredictions = lines.filter(line => line.includes('Đúng ✓')).length;
-        return correctPredictions / lines.length;
+        const accuracy = correctPredictions / lines.length;
+        
+        // Nếu không cần thông tin chi tiết, trả về tỷ lệ đơn giản
+        if (!detailedInfo) {
+            return accuracy;
+        }
+        
+        // Phân tích chi tiết từng phương pháp
+        const methodStats = {};
+        const methodCounts = {};
+        const taiXiuResults = []; // Mảng lưu kết quả Tài/Xỉu theo thứ tự thời gian
+        
+        for (const line of lines) {
+            // Trích xuất phương pháp
+            const methodMatch = line.match(/\| Phương pháp: (\w+) \|/);
+            if (methodMatch && methodMatch[1]) {
+                const method = methodMatch[1];
+                const isCorrect = line.includes('Đúng ✓');
+                
+                if (!methodStats[method]) {
+                    methodStats[method] = {
+                        correct: 0,
+                        total: 0,
+                        accuracy: 0
+                    };
+                }
+                
+                methodStats[method].total++;
+                if (isCorrect) {
+                    methodStats[method].correct++;
+                }
+                methodStats[method].accuracy = methodStats[method].correct / methodStats[method].total;
+                
+                // Đếm số lần sử dụng từng phương pháp
+                methodCounts[method] = (methodCounts[method] || 0) + 1;
+            }
+            
+            // Trích xuất kết quả thực tế (Tài/Xỉu)
+            const actualMatch = line.match(/Số thực tế: \d+ \((Tài|Xỉu)\)/);
+            if (actualMatch && actualMatch[1]) {
+                taiXiuResults.push(actualMatch[1]);
+            }
+        }
+        
+        // Xác định phương pháp được sử dụng nhiều nhất
+        let mostUsedMethod = null;
+        let maxUseCount = 0;
+        for (const method in methodCounts) {
+            if (methodCounts[method] > maxUseCount) {
+                maxUseCount = methodCounts[method];
+                mostUsedMethod = method;
+            }
+        }
+        
+        // Xác định xu hướng kết quả gần đây
+        let recentTrend = 'mixed';
+        if (taiXiuResults.length >= 3) {
+            // Kiểm tra chuỗi giống nhau
+            let sameTaiXiuCount = 1;
+            for (let i = 1; i < Math.min(5, taiXiuResults.length); i++) {
+                if (taiXiuResults[i] === taiXiuResults[0]) {
+                    sameTaiXiuCount++;
+                } else {
+                    break;
+                }
+            }
+            
+            if (sameTaiXiuCount >= 3) {
+                recentTrend = `${sameTaiXiuCount} ${taiXiuResults[0]} liên tiếp`;
+            } 
+            else {
+                // Kiểm tra mẫu luân phiên
+                let alternatingCount = 0;
+                for (let i = 1; i < Math.min(5, taiXiuResults.length); i++) {
+                    if (taiXiuResults[i] !== taiXiuResults[i-1]) {
+                        alternatingCount++;
+                    }
+                }
+                
+                if (alternatingCount >= 3) {
+                    recentTrend = 'alternating';
+                }
+            }
+        }
+        
+        // Trả về đối tượng chứa thông tin chi tiết
+        return {
+            accuracy,
+            sampleSize: lines.length,
+            correctCount: correctPredictions,
+            methodStats,
+            mostUsedMethod,
+            mostUsedMethodCount: maxUseCount,
+            recentTrend,
+            recentResults: taiXiuResults.slice(0, 5) // 5 kết quả gần nhất
+        };
     } catch (error) {
         console.error(`Lỗi khi tính độ chính xác gần đây: ${error.message}`);
-        return 0.5;
+        return detailedInfo ? { 
+            accuracy: 0.5, 
+            sampleSize: 0,
+            correctCount: 0,
+            methodStats: {},
+            recentTrend: 'error'
+        } : 0.5;
     }
 }
 

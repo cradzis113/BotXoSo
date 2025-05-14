@@ -1,0 +1,20 @@
+{
+  "drawId": "202505141389",
+  "timestamp": "2025-05-14T17:21:19.755Z",
+  "doanTaiXiu": "Tài",
+  "prediction": true,
+  "method": "CyclicalPattern",
+  "confidence": 0.18720000000000003,
+  "reason": " Phát hiện mẫu XXT rõ rệt, dự đoán tiếp tục T",
+  "numbers": [
+    6,
+    4,
+    5,
+    1,
+    2
+  ],
+  "predictedValue": 6,
+  "targetIndex": 0,
+  "timeSegment": "latenight",
+  "version": "v6.4.0"
+}

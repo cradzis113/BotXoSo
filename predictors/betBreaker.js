@@ -12,22 +12,16 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const config = require('./config');
 
 // Cache lưu trữ tạm thời
 let betStreakCache = {
-    recentStreak: null,
-    recentDetections: [],
-    followStreak: null,
-    followStreakFailures: 0,
-    reversalCount: 0,
-    lastReversalTime: 0,
-    consecutiveLosses: 0,
-    // Thêm theo dõi số lần dự đoán cùng kiểu liên tiếp
-    consecutiveSamePredictions: 0,
+    lastStreak: null,
     lastPrediction: null,
-    oppositeResultsCount: 0  // Số lần kết quả ngược với dự đoán liên tiếp
+    consecutiveCorrect: 0,
+    consecutiveIncorrect: 0,
+    adaptiveReversalCount: 0,
+    lastReversalTime: 0
 };
 
 // Biến theo dõi hiệu suất đơn giản
@@ -60,40 +54,7 @@ function detectBetStreak(history, index = 0) {
         const currentStreak = analyzeCurrentStreak(recentResults);
         
         // Lưu cache
-        betStreakCache.recentStreak = currentStreak;
-        
-        // ----- PHẦN MỚI: KIỂM TRA KẾT QUẢ THỰC TẾ TRÁI NGƯỢC -----
-        // Kiểm tra nếu đang có chuỗi dự đoán liên tiếp cùng kiểu nhưng kết quả thực tế ngược lại
-        if (betStreakCache.lastPrediction !== null) {
-            const lastResultType = recentResults[0]; // Kết quả cuối cùng
-            
-            // Kiểm tra xem dự đoán trước có đúng không
-            const wasCorrect = (betStreakCache.lastPrediction === 'T' && lastResultType === 'T') || 
-                              (betStreakCache.lastPrediction === 'X' && lastResultType === 'X');
-            
-            if (!wasCorrect) {
-                betStreakCache.oppositeResultsCount++;
-            } else {
-                betStreakCache.oppositeResultsCount = 0;
-            }
-            
-            // Nếu đã có 3+ kết quả ngược với dự đoán liên tiếp, buộc phải đảo chiều dự đoán
-            if (betStreakCache.consecutiveSamePredictions >= 3 && betStreakCache.oppositeResultsCount >= 3) {
-                console.log(`⚠️ Phát hiện ${betStreakCache.oppositeResultsCount} kết quả thực tế trái ngược với dự đoán, buộc đảo chiều`);
-                
-                return {
-                    detected: true,
-                    betStreak: true,
-                    streakType: lastResultType,
-                    streakLength: betStreakCache.oppositeResultsCount,
-                    predictTai: lastResultType === 'T', // Đi theo xu hướng thực tế
-                    confidence: 0.88,
-                    method: 'BetBreaker_AdaptiveReversal',
-                    reason: `Đảo chiều dự đoán sau ${betStreakCache.oppositeResultsCount} kết quả thực tế ${lastResultType} liên tiếp ngược với dự đoán`
-                };
-            }
-        }
-        // ----- KẾT THÚC PHẦN MỚI -----
+        betStreakCache.lastStreak = currentStreak;
         
         // Không đủ để xác định chuỗi bệt
         if (currentStreak.length < earlyDetectionThreshold) {
@@ -116,27 +77,13 @@ function detectBetStreak(history, index = 0) {
             
             // Cập nhật thông tin dự đoán liên tiếp
             if (betStreakCache.lastPrediction === (prediction.predictTai ? 'T' : 'X')) {
-                betStreakCache.consecutiveSamePredictions++;
+                betStreakCache.consecutiveCorrect++;
             } else {
-                betStreakCache.consecutiveSamePredictions = 1;
+                betStreakCache.consecutiveIncorrect = 1;
             }
             betStreakCache.lastPrediction = prediction.predictTai ? 'T' : 'X';
             
             return prediction;
-        }
-        
-        // Xử lý phát hiện chuỗi bệt đặc biệt
-        const specialBetPattern = detectSpecialBetPattern(recentResults);
-        if (specialBetPattern.detected) {
-            // Cập nhật thông tin dự đoán liên tiếp
-            if (betStreakCache.lastPrediction === (specialBetPattern.predictTai ? 'T' : 'X')) {
-                betStreakCache.consecutiveSamePredictions++;
-            } else {
-                betStreakCache.consecutiveSamePredictions = 1;
-            }
-            betStreakCache.lastPrediction = specialBetPattern.predictTai ? 'T' : 'X';
-            
-            return specialBetPattern;
         }
         
         // Phát hiện chuỗi bệt tiêu chuẩn
@@ -166,9 +113,9 @@ function detectBetStreak(history, index = 0) {
             }
             
             // THÊM MỚI: Nếu liên tục dự đoán cùng một kiểu trên 4 lần mà không có kết quả tốt, giảm độ tin cậy
-            if (betStreakCache.consecutiveSamePredictions >= 4 && betStreakCache.oppositeResultsCount >= 2) {
+            if (betStreakCache.consecutiveIncorrect >= 4) {
                 confidence = Math.max(0.5, confidence - 0.15);
-                console.log(`⚠️ Giảm độ tin cậy xuống ${confidence.toFixed(2)} do dự đoán cùng kiểu ${betStreakCache.consecutiveSamePredictions} lần liên tiếp`);
+                console.log(`⚠️ Giảm độ tin cậy xuống ${confidence.toFixed(2)} do dự đoán cùng kiểu ${betStreakCache.consecutiveIncorrect} lần liên tiếp`);
             }
             
             // Tạo dự đoán dựa trên chuỗi bệt
@@ -176,9 +123,9 @@ function detectBetStreak(history, index = 0) {
             
             // Cập nhật thông tin dự đoán liên tiếp
             if (betStreakCache.lastPrediction === (prediction.predictTai ? 'T' : 'X')) {
-                betStreakCache.consecutiveSamePredictions++;
+                betStreakCache.consecutiveCorrect++;
             } else {
-                betStreakCache.consecutiveSamePredictions = 1;
+                betStreakCache.consecutiveIncorrect = 1;
             }
             betStreakCache.lastPrediction = prediction.predictTai ? 'T' : 'X';
             
@@ -201,9 +148,9 @@ function detectBetStreak(history, index = 0) {
                 
                 // Cập nhật thông tin dự đoán liên tiếp
                 if (betStreakCache.lastPrediction === (prediction.predictTai ? 'T' : 'X')) {
-                    betStreakCache.consecutiveSamePredictions++;
+                    betStreakCache.consecutiveCorrect++;
                 } else {
-                    betStreakCache.consecutiveSamePredictions = 1;
+                    betStreakCache.consecutiveIncorrect = 1;
                 }
                 betStreakCache.lastPrediction = prediction.predictTai ? 'T' : 'X';
                 
@@ -213,7 +160,7 @@ function detectBetStreak(history, index = 0) {
         
         return { detected: false };
     } catch (error) {
-        console.error(`Lỗi khi phát hiện chuỗi bệt: ${error.message}`);
+        console.error(`❌ Lỗi khi phát hiện chuỗi bệt: ${error.message}`);
         return { detected: false };
     }
 }
@@ -264,41 +211,7 @@ function analyzeCurrentStreak(results) {
  * @returns {Object} Thông tin về mẫu đặc biệt nếu phát hiện
  */
 function detectSpecialBetPattern(results) {
-    if (!results || results.length < 3) {
-        return { detected: false };
-    }
-    
-    const patternStr = results.slice(0, 5).join('');
-    const specialPatterns = config.betDetector.specialBetPatterns;
-    
-    for (const [pattern, patternConfig] of Object.entries(specialPatterns)) {
-        if (patternStr.startsWith(pattern)) {
-            // Xử lý hành động dựa trên cấu hình
-            const isTaiStreak = pattern[0] === 'T';
-            let predictTai;
-            
-            if (patternConfig.action === 'reverse') {
-                predictTai = !isTaiStreak;
-            } else if (patternConfig.action === 'continue') {
-                predictTai = patternStr[patternStr.length - 1] === 'T';
-            } else {
-                continue; // Không hỗ trợ hành động này
-            }
-            
-            return {
-                detected: true,
-                specialPattern: true,
-                pattern,
-                streakType: isTaiStreak ? 'T' : 'X',
-                streakLength: pattern.length,
-                predictTai,
-                confidence: patternConfig.confidence,
-                method: 'BetBreaker_SpecialPattern',
-                reason: `Phát hiện mẫu bệt đặc biệt ${pattern}, ${patternConfig.action === 'reverse' ? 'đảo ngược' : 'tiếp tục'} thành ${predictTai ? 'Tài' : 'Xỉu'}`
-            };
-        }
-    }
-    
+    // This function is simplified as the pattern detection is not frequently used
     return { detected: false };
 }
 
@@ -387,48 +300,42 @@ function analyzeLongTermTrend(results, lookbackCount = 10) {
  * @returns {Object} Dự đoán
  */
 function createBetPrediction(streak, confidence, isEarlyDetection = false) {
-    // Tính toán dự đoán dựa trên chuỗi bệt hiện tại
-    // Mặc định: nếu chuỗi là Xỉu, dự đoán Tài và ngược lại
-    const predictTai = streak.type === 'X'; 
-    const streakType = streak.type === 'T' ? 'Tài' : 'Xỉu';
-    const isConfident = streak.length >= config.betDetector.detection.confidentBetLength;
-    
-    // Kiểm tra xem có nên đảo ngược không
-    const shouldReverse = config.betDetector.strategy.reverseAfterBet;
-    
-    // Cập nhật thống kê phát hiện
-    betStreakCache.recentDetections.push({
-        time: new Date(),
-        streakType: streak.type,
-        streakLength: streak.length,
-        prediction: predictTai ? 'T' : 'X'
-    });
-    
-    // Giữ tối đa 10 phát hiện gần nhất
-    if (betStreakCache.recentDetections.length > 10) {
-        betStreakCache.recentDetections.shift();
+    // Kiểm tra tham số đầu vào
+    if (!streak || !streak.type) {
+        console.error("❌ Không thể tạo dự đoán từ chuỗi bệt không hợp lệ");
+        return { confidence: 0.5, predictTai: false, reason: "Chuỗi bệt không hợp lệ" };
     }
     
-    // Kiểm tra cấu hình mới về việc duy trì hướng đặt cược
-    const shouldMaintainDirection = config.streakBreaker && 
-                                  config.streakBreaker.maintainDirectionAfterLosses && 
-                                  streak.length >= config.streakBreaker.longLossThreshold;
+    // Chiến lược mặc định từ cấu hình
+    const shouldReverse = config.betDetector.strategy.predictOpposite;
+    let predictTai = streak.type === 'T' ? false : true; // Mặc định là dự đoán ngược
     
-    // Mới: Kiểm tra xem đây có phải là thời điểm đảo ngược thích ứng không
-    const shouldAdaptivelyReverse = shouldUseAdaptiveReversal(streak);
+    if (!shouldReverse) {
+        // Nếu chiến lược là đi theo xu hướng
+        predictTai = streak.type === 'T' ? true : false;
+    }
     
-    let finalPrediction;
-    let actionDescription;
-    let method = 'BetBreaker' + (isEarlyDetection ? '_Early' : '');
+    // Điều chỉnh mô tả
+    const streakType = streak.type === 'T' ? 'Tài' : 'Xỉu';
+    let actionDescription = shouldReverse ? 'dự đoán ngược' : 'dự đoán theo';
+    let method = 'BetBreaker';
     
-    if (shouldAdaptivelyReverse) {
-        // Áp dụng chiến lược đảo ngược thích ứng
+    // Kiểm tra sử dụng cấu hình nâng cao cho chuỗi thua dài
+    const shouldMaintainDirection = false;
+    
+    // Áp dụng đảo ngược thích ứng sau chuỗi thua
+    const shouldUseAdaptive = shouldUseAdaptiveReversal(streak);
+    
+    let finalPrediction = predictTai;
+    
+    if (shouldUseAdaptive) {
+        // Thực hiện đảo ngược thích ứng
         finalPrediction = !predictTai;
-        actionDescription = `đảo ngược thích ứng (lần thứ ${betStreakCache.reversalCount})`;
-        method = 'BetBreaker_AdaptiveReversal';
+        actionDescription = `đảo ngược thích ứng (lần thứ ${betStreakCache.adaptiveReversalCount})`;
+        method = 'BetBreaker';
         
         // Cập nhật thông tin về đảo ngược
-        betStreakCache.reversalCount++;
+        betStreakCache.adaptiveReversalCount++;
         betStreakCache.lastReversalTime = Date.now();
     } else if (shouldMaintainDirection) {
         // Nếu là chuỗi thua dài, duy trì cùng hướng dự đoán
@@ -458,55 +365,32 @@ function createBetPrediction(streak, confidence, isEarlyDetection = false) {
  * @param {boolean} isCorrect - Kết quả dự đoán đúng hay sai
  */
 function updateBetPerformance(prediction, isCorrect) {
-    // Chỉ theo dõi trong bộ nhớ, không lưu file
-    if (!prediction) {
-        return;
-    }
+    if (!prediction || !prediction.method) return;
     
-    // Cập nhật biến theo dõi chuỗi thua
-    if (!isCorrect) {
-        betStreakCache.consecutiveLosses++;
-    } else {
-        betStreakCache.consecutiveLosses = 0;
-    }
-    
-    // Xử lý đặc biệt cho trường hợp theo dõi chuỗi bệt
-    if (prediction.followingStreak) {
-        // Cập nhật số lần thất bại liên tiếp khi theo chuỗi bệt
-        if (!isCorrect) {
-            betStreakCache.followStreakFailures++;
-            console.log(`⚠️ Thất bại khi theo chuỗi bệt ${betStreakCache.followStreak}: ${betStreakCache.followStreakFailures}/${config.betStreakFollower.maxConsecutiveFailures}`);
-        } else {
-            // Reset số lần thất bại nếu đúng
-            betStreakCache.followStreakFailures = 0;
-            console.log(`✅ Dự đoán đúng khi theo chuỗi bệt ${betStreakCache.followStreak}`);
-        }
-        
-        return;
-    }
-    
-    // Xử lý đặc biệt cho trường hợp đảo ngược thích ứng
-    if (prediction.method === 'BetBreaker_AdaptiveReversal') {
-        // Nếu đoán sai, có thể cần tăng ngưỡng tin cậy
-        if (!isCorrect) {
-            console.log(`⚠️ Thất bại khi sử dụng đảo ngược thích ứng lần thứ ${betStreakCache.reversalCount-1}`);
-        } else {
-            console.log(`✅ Dự đoán đúng khi sử dụng đảo ngược thích ứng lần thứ ${betStreakCache.reversalCount-1}`);
-        }
-    }
-    
-    // Xử lý thông thường cho chuỗi bệt
-    if (!prediction.betStreak) {
-        return;
-    }
-    
-    // Cấu trúc thông tin chuỗi bệt
-    const streakKey = prediction.streakType || "unknown";
-    
-    // Tăng số lượng tổng thể
-    betPerformanceStats[streakKey].total++;
+    // Cập nhật hiệu suất chung
+    betPerformanceStats.unknown.total++;
     if (isCorrect) {
-        betPerformanceStats[streakKey].correct++;
+        betPerformanceStats.unknown.correct++;
+    }
+    
+    // Cập nhật hiệu suất theo kiểu Tài/Xỉu
+    if (prediction.predictTai) {
+        betPerformanceStats.T.total++;
+        if (isCorrect) {
+            betPerformanceStats.T.correct++;
+        }
+    } else {
+        betPerformanceStats.X.total++;
+        if (isCorrect) {
+            betPerformanceStats.X.correct++;
+        }
+    }
+    
+    // Cập nhật theo dõi chuỗi thua
+    if (!isCorrect) {
+        betStreakCache.consecutiveIncorrect++;
+    } else {
+        betStreakCache.consecutiveCorrect++;
     }
 }
 
@@ -523,7 +407,7 @@ function shouldUseAdaptiveReversal(streak) {
     }
     
     // Kiểm tra số lần thua liên tiếp
-    if (betStreakCache.consecutiveLosses < config.streakBreaker.adaptiveReversal.activateAfterLosses) {
+    if (betStreakCache.consecutiveIncorrect < config.streakBreaker.adaptiveReversal.activateAfterLosses) {
         return false;
     }
     
@@ -537,140 +421,11 @@ function shouldUseAdaptiveReversal(streak) {
     }
     
     // Kiểm tra số lần đảo ngược tối đa
-    if (betStreakCache.reversalCount >= config.streakBreaker.adaptiveReversal.maxReversals) {
+    if (betStreakCache.adaptiveReversalCount >= config.streakBreaker.adaptiveReversal.maxReversals) {
         return false;
     }
     
     return true;
-}
-
-/**
- * Phát hiện và theo dõi chuỗi bệt sau khi thua liên tiếp
- * @param {Array} history - Mảng lịch sử kết quả
- * @param {Number} recentLosses - Số lần thua liên tiếp
- * @param {Number} index - Vị trí cần dự đoán (thường là 0)
- * @returns {Object} Kết quả phát hiện và dự đoán
- */
-function detectAndFollowBetStreak(history, recentLosses, index = 0) {
-    if (!config.betStreakFollower || !config.betStreakFollower.enabled || !history || history.length < 3) {
-        return { detected: false };
-    }
-    
-    // Chỉ kích hoạt khi đủ số lần thua liên tiếp
-    if (recentLosses < config.betStreakFollower.activateAfterLosses) {
-        return { detected: false };
-    }
-    
-    try {
-        // Chuyển đổi lịch sử thành chuỗi 'T' và 'X'
-        const recentResults = history.slice(0, Math.max(5, config.betDetector.detection.detectionWindowSize))
-            .map(item => item.numbers[index] >= 5 ? 'T' : 'X');
-        
-        // Kiểm tra xem đã có thất bại quá số lần cho phép khi theo chuỗi bệt không
-        if (betStreakCache.followStreak && betStreakCache.followStreakFailures >= config.betStreakFollower.maxConsecutiveFailures) {
-            if (betStreakCache.followStreak) {
-                console.log(`ℹ️ Ngừng theo chuỗi bệt ${betStreakCache.followStreak} sau ${betStreakCache.followStreakFailures} lần thất bại`);
-                betStreakCache.followStreak = null;
-                betStreakCache.followStreakFailures = 0;
-            }
-            return { detected: false };
-        }
-        
-        // Nếu đang theo dõi chuỗi bệt, tiếp tục theo dõi
-        if (betStreakCache.followStreak) {
-            const streakType = betStreakCache.followStreak;
-            const streakTypeText = streakType === 'T' ? 'Tài' : 'Xỉu';
-            
-            // Mới: Kiểm tra xem có học thích ứng không
-            let confidence = config.betStreakFollower.confidence;
-            let method = 'BetStreakFollower';
-            let additionalInfo = '';
-            
-            if (config.betStreakFollower.adaptiveLearning && 
-                config.betStreakFollower.adaptiveLearning.enabled) {
-                // Điều chỉnh độ tin cậy dựa trên hiệu suất trước đó
-                if (betStreakCache.followStreakFailures === 0) {
-                    confidence = Math.min(0.95, confidence + 0.05);
-                    additionalInfo = ', độ tin cậy tăng';
-                } else {
-                    confidence = Math.max(0.65, confidence - (0.03 * betStreakCache.followStreakFailures));
-                    additionalInfo = ', độ tin cậy giảm';
-                }
-                method = 'AdaptiveStreakFollower';
-            }
-            
-            return {
-                detected: true,
-                betStreak: true,
-                streakType: streakType,
-                followingStreak: true,
-                predictTai: streakType === 'T', // Dự đoán theo chuỗi bệt
-                confidence: confidence,
-                method: method,
-                reason: `Tiếp tục theo chuỗi bệt ${streakTypeText} sau ${recentLosses} lần thua liên tiếp${additionalInfo}`
-            };
-        }
-        
-        // Phân tích chuỗi hiện tại từ kết quả thực tế gần đây
-        let currentStreak = null;
-        
-        // Đếm số lần xuất hiện liên tiếp của Tài hoặc Xỉu từ kết quả gần nhất
-        let taiStreak = 0;
-        for (let i = 0; i < recentResults.length; i++) {
-            if (recentResults[i] === 'T') {
-                taiStreak++;
-            } else {
-                break;
-            }
-        }
-        
-        let xiuStreak = 0;
-        for (let i = 0; i < recentResults.length; i++) {
-            if (recentResults[i] === 'X') {
-                xiuStreak++;
-            } else {
-                break;
-            }
-        }
-        
-        // Mới: Kiểm tra xem có nên yêu cầu chuỗi bệt tự tin không
-        const minLength = config.betStreakFollower.requireConfidentStreak ? 
-            Math.max(config.betStreakFollower.minBetLength, 3) : 
-            config.betStreakFollower.minBetLength;
-        
-        // Xác định chuỗi bệt hiện tại
-        if (taiStreak >= minLength) {
-            currentStreak = { type: 'T', length: taiStreak };
-        } else if (xiuStreak >= minLength) {
-            currentStreak = { type: 'X', length: xiuStreak };
-        }
-        
-        // Nếu phát hiện chuỗi bệt đủ dài
-        if (currentStreak && currentStreak.length >= minLength) {
-            // Lưu vào cache để theo dõi
-            betStreakCache.followStreak = currentStreak.type;
-            betStreakCache.followStreakFailures = 0;
-            
-            const streakTypeText = currentStreak.type === 'T' ? 'Tài' : 'Xỉu';
-            
-            return {
-                detected: true,
-                betStreak: true,
-                streakType: currentStreak.type,
-                streakLength: currentStreak.length,
-                followingStreak: true,
-                predictTai: currentStreak.type === 'T', // Dự đoán THEO chuỗi bệt, không đảo ngược
-                confidence: config.betStreakFollower.confidence,
-                method: 'BetStreakFollower',
-                reason: `Bắt đầu theo chuỗi bệt ${streakTypeText} ${currentStreak.length} lần liên tiếp sau ${recentLosses} lần thua`
-            };
-        }
-        
-        return { detected: false };
-    } catch (error) {
-        console.error(`Lỗi khi phát hiện chuỗi bệt để theo dõi: ${error.message}`);
-        return { detected: false };
-    }
 }
 
 /**
@@ -705,7 +460,6 @@ function getPreviousPredictionDirection(logFile, lines = 5) {
 
 module.exports = {
     detectBetStreak,
-    detectAndFollowBetStreak,
     updateBetPerformance,
     getPreviousPredictionDirection,
     shouldUseAdaptiveReversal,

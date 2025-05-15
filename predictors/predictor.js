@@ -283,7 +283,9 @@ function detectLongStreaks(history, index) {
     
     // CẢI TIẾN 7: Điều chỉnh xác suất dựa trên hiệu suất quá khứ
     if (typeof global.getMethodSuccessRate === 'function') {
-        const lastPerformance = global.getMethodSuccessRate("LongStreakPattern");
+        
+        // Dựa vào hiệu suất tổng thể thay vì một phương pháp cụ thể
+        const lastPerformance = global.getMethodSuccessRate("AdvancedCombination");
         
         if (lastPerformance < 0.45) {
             reverseProb = 1 - reverseProb;
@@ -742,172 +744,6 @@ function detectFastPattern(history, index) {
 }
 
 /**
- * V5.0: Phát hiện mẫu dựa trên thời gian
- * @param {Array} history - Lịch sử kết quả
- * @param {Number} index - Vị trí cần dự đoán
- * @returns {Object} Kết quả phát hiện mẫu theo thời gian
- */
-function detectTimeBasedPattern(history, index) {
-    // Kiểm tra dữ liệu đầu vào
-    if (!history || !Array.isArray(history) || history.length < 10) {
-        return { detected: false };
-    }
-    
-    // Nhóm kết quả theo giờ trong ngày
-    const hourlyPatterns = {};
-    let hourlyResults = {};
-    
-    // Phân tích 50 kỳ gần nhất để có đủ dữ liệu
-    const recentHistory = history.slice(0, Math.min(50, history.length));
-    
-    // Đảm bảo dữ liệu có timestamp
-    recentHistory.forEach(item => {
-        if (!item.timestamp && item.drawId) {
-            // Tạo timestamp giả từ drawId
-            const drawIdStr = item.drawId.toString();
-            const year = parseInt(drawIdStr.substring(0, 4));
-            const month = parseInt(drawIdStr.substring(4, 6)) - 1;
-            const day = parseInt(drawIdStr.substring(6, 8));
-            // Lấy giờ, phút từ 4 số cuối của drawId
-            const timeCode = parseInt(drawIdStr.slice(-4));
-            // Ước tính giờ và phút dựa trên mã kỳ (giả định mỗi kỳ 45 giây, 80 kỳ/giờ)
-            const hour = Math.floor(timeCode / 100);
-            const minute = (timeCode % 100);
-            
-            item.timestamp = new Date(year, month, day, hour, minute).toISOString();
-        }
-    });
-    
-    recentHistory.forEach(item => {
-        if (item.timestamp) {
-            // Phân tích timestamp
-            const date = new Date(item.timestamp);
-            const hour = date.getHours();
-            
-            // Khởi tạo nếu chưa có
-            if (!hourlyResults[hour]) {
-                hourlyResults[hour] = [];
-            }
-            
-            // Thêm kết quả Tài/Xỉu vào giờ tương ứng
-            const isTai = item.numbers[index] >= 5;
-            hourlyResults[hour].push(isTai ? 'T' : 'X');
-        }
-    });
-    
-    // Phân tích xu hướng từng giờ
-    const currentHour = new Date().getHours();
-    let hasPatternForCurrentHour = false;
-    let currentHourPrediction = null;
-    let currentHourConfidence = 0;
-    let currentHourReason = "";
-    
-    Object.keys(hourlyResults).forEach(hour => {
-        const results = hourlyResults[hour];
-        const hourInt = parseInt(hour);
-        
-        if (results.length >= 5) {
-            const taiCount = results.filter(r => r === 'T').length;
-            const taiRate = taiCount / results.length;
-            
-            // Lưu phân tích cho mỗi giờ
-            hourlyPatterns[hour] = {
-                taiRate: taiRate,
-                sampleSize: results.length,
-                predictTai: taiRate > 0.55, // Dự đoán Tài nếu tỷ lệ > 55%
-                confidence: Math.abs(taiRate - 0.5) * 2, // Tính độ tin cậy
-                pattern: results.slice(-5).join('') // 5 kết quả gần nhất
-            };
-            
-            // Lưu thông tin giờ hiện tại
-            if (hourInt === currentHour && results.length >= 10) {
-                hasPatternForCurrentHour = true;
-                currentHourPrediction = taiRate > 0.55;
-                
-                // Tính độ tin cậy dựa trên độ lệch và kích thước mẫu
-                const deviation = Math.abs(taiRate - 0.5);
-                const sampleFactor = Math.min(1, results.length / 20); // Yếu tố kích thước mẫu (tối đa 1)
-                currentHourConfidence = deviation * 2 * sampleFactor;
-                
-                // Tăng độ tin cậy nếu xu hướng rất rõ ràng
-                if (deviation > 0.2) {
-                    currentHourConfidence = Math.min(0.85, currentHourConfidence + 0.1);
-                }
-                
-                currentHourReason = `Phân tích giờ ${currentHour}h: ${Math.round(taiRate * 100)}% Tài (${results.length} mẫu)`;
-            }
-        }
-    });
-    
-    // Phân tích theo thời điểm trong ngày
-    const timePeriod = getTimePeriod(currentHour);
-    
-    // Nếu có mẫu cho giờ hiện tại và độ tin cậy cao, ưu tiên sử dụng
-    if (hasPatternForCurrentHour && currentHourConfidence > 0.65) {
-        return {
-            detected: true,
-            predictTai: currentHourPrediction,
-            confidence: currentHourConfidence,
-            reason: currentHourReason
-        };
-    }
-    
-    // Phân tích xu hướng trong khung giờ (sáng, chiều, tối)
-    const periodResults = getPeriodResults(hourlyResults, timePeriod);
-    
-    if (periodResults.length >= 15) {
-        const taiCount = periodResults.filter(r => r === 'T').length;
-        const taiRate = taiCount / periodResults.length;
-        
-        // Nếu có xu hướng rõ trong khung giờ
-        if (Math.abs(taiRate - 0.5) > 0.1) {
-            return {
-                detected: true,
-                predictTai: taiRate > 0.5,
-                confidence: Math.abs(taiRate - 0.5) * 1.8, // Độ tin cậy thấp hơn phân tích giờ cụ thể
-                reason: `Phân tích khung giờ ${timePeriod}: ${Math.round(taiRate * 100)}% Tài (${periodResults.length} mẫu)`
-            };
-        }
-    }
-    
-    // Phân tích mẫu gần nhất cho giờ hiện tại
-    if (hourlyResults[currentHour] && hourlyResults[currentHour].length >= 3) {
-        const recentPattern = hourlyResults[currentHour].slice(-3).join('');
-        
-        // Một số mẫu cụ thể có độ tin cậy cao
-        if (recentPattern === 'TTT') {
-            return {
-                detected: true,
-                predictTai: false, // Sau 3 Tài liên tiếp thường là Xỉu
-                confidence: 0.75,
-                reason: `Mẫu 3 Tài liên tiếp trong giờ ${currentHour}h, dự đoán đảo chiều`
-            };
-        }
-        
-        if (recentPattern === 'XXX') {
-            return {
-                detected: true,
-                predictTai: true, // Sau 3 Xỉu liên tiếp thường là Tài
-                confidence: 0.75,
-                reason: `Mẫu 3 Xỉu liên tiếp trong giờ ${currentHour}h, dự đoán đảo chiều`
-            };
-        }
-        
-        // Mẫu xen kẽ hoàn hảo
-        if (recentPattern === 'TXT' || recentPattern === 'XTX') {
-            return {
-                detected: true,
-                predictTai: recentPattern === 'XTX', // Theo mẫu xen kẽ
-                confidence: 0.70,
-                reason: `Mẫu xen kẽ ${recentPattern} trong giờ ${currentHour}h, dự đoán theo mẫu`
-            };
-        }
-    }
-    
-    return { detected: false };
-}
-
-/**
  * Xác định khung giờ trong ngày
  * @param {Number} hour - Giờ cần xác định
  * @returns {String} Tên khung giờ
@@ -1330,7 +1166,7 @@ function detectAdaptivePattern(history, index = 0) {
         predictTai: null, 
         confidence: 0, 
         reason: "", 
-        method: "AdaptivePatternRecognition" 
+        method: "AdaptivePattern" 
     };
     
     try {
@@ -1407,10 +1243,7 @@ function detectAdaptivePattern(history, index = 0) {
  */
 module.exports = {
     detectCyclicalReversals,
-    detectLongStreaks,
-    detectShortAlternatingPattern,
     detectFastPattern,
-    detectTimeBasedPattern,
     advancedCombinationPattern,
     comboPatternCache,
     generateNumbers,

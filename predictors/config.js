@@ -1,26 +1,18 @@
 /**
  * File cấu hình thống nhất cho hệ thống dự đoán
- * Phiên bản: v6.4.0
+ * Phiên bản: v6.6.0
  */
 
 const CONFIG = {
     // Thông tin phiên bản
-    version: "v6.4.0",
+    version: "v6.6.0",
     
     // Trọng số cho các thuật toán - dựa trên phân tích hiệu suất
     defaultWeights: {
-        AdvancedCombination: 0.30,       // Tăng từ 0.28 lên 0.30 (phân bổ lại trọng số)
-        ShortAlternatingPattern: 0.16,   // Tăng từ 0.15 lên 0.16
-        CyclicalPattern: 0.14,           // Tăng từ 0.13 lên 0.14
-        BetBreaker: 0.16,                // Tăng từ 0.15 lên 0.16
-        BetStreakFollower: 0.11,         // Tăng từ 0.10 lên 0.11
-        FastPatternDetector: 0.09,       // Tăng từ 0.08 lên 0.09
-        TimeBasedPattern: 0.05,          // Tăng từ 0.04 lên 0.05
-        LongStreakPattern: 0.04,         // Tăng từ 0.03 lên 0.04
-        AdaptivePatternRecognition: 0.00, // Giữ nguyên 0.00
-        TimeAnalysis: 0.03,              // Tăng từ 0.02 lên 0.03
-        AdaptiveLearning: 0.01,          // Giữ nguyên 0.01
-        StatisticalRegression: 0.01      // Giữ nguyên 0.01
+        AdvancedCombination: 0.70,       // Tăng từ 0.60 lên 0.70
+        CyclicalPattern: 0.13,           // Tăng từ 0.07 lên 0.13
+        BetBreaker: 0.10,                // Tăng từ 0.08 lên 0.10
+        FastPatternDetector: 0.01,       // Giảm từ 0.05 xuống 0.01
     },
     
     // Cấu hình phân tích
@@ -32,13 +24,13 @@ const CONFIG = {
         peakHoursThreshold: 0.65,     // Giữ nguyên 0.65
         peakHoursStart: 18,           // Giữ nguyên
         peakHoursEnd: 22,             // Giữ nguyên
-        // Phân tích xu hướng thống kê
+        // Phân tích xu hướng thống kê - Đã loại bỏ vì không hiệu quả
         statisticalAnalysis: {
-            enabled: true,
-            regressionThreshold: 0.2,   // Ngưỡng độ lệch để kích hoạt dự đoán hồi quy
-            windowSize: 30,             // Kích thước cửa sổ phân tích xu hướng
-            minConfidence: 0.65,        // Độ tin cậy tối thiểu
-            maxConfidence: 0.85         // Độ tin cậy tối đa
+            enabled: false,           // Vô hiệu hóa
+            regressionThreshold: 0.2,  
+            windowSize: 30,            
+            minConfidence: 0.65,      
+            maxConfidence: 0.85       
         }
     },
     
@@ -46,81 +38,60 @@ const CONFIG = {
     logging: {
         detailedLogs: true,
         predictionLogFile: './data/prediction_log.txt',
-        reversalLogFile: './data/prediction_reversal_log.txt', // Mới: Ghi log đảo ngược dự đoán
-        performanceLogFile: './data/performance_log.txt'       // Mới: Ghi log hiệu suất
+        reversalLogFile: './data/prediction_reversal_log.txt',
+        performanceLogFile: './data/performance_log.txt'
     },
     
     // Cấu hình đặt cược
     betting: {
         initialBalance: 10000000,
         defaultBetAmount: 100000,
-        maxConsecutiveLosses: 3,           // Giữ nguyên do phân tích cho thấy có tối đa 5 lần thua liên tiếp
+        maxConsecutiveLosses: 3,
         winMultiplier: 1.95,
         enableProgressiveBetting: true,
-        betMultiplierAfterLoss: 1.3,       // Giữ nguyên 1.3
+        betMultiplierAfterLoss: 1.3,
         enableSelective: true,
-        maximumDailyBets: 200,             // Giữ nguyên 200
-        restPeriodAfterLosses: 7,          // Giữ nguyên 7
+        maximumDailyBets: 200,
+        restPeriodAfterLosses: 7,
         useKellyCriterion: true,
-        kellyFraction: 0.25,               // Giữ nguyên - cẩn trọng với quản lý vốn
-        maxRiskPerBet: 0.03,               // Giữ nguyên - giảm rủi ro
-        timeBasedBetting: true,            // Giữ nguyên
-        morningBetMultiplier: 1.0,         // Giữ nguyên 1.0
-        afternoonBetMultiplier: 0.8,       // Giữ nguyên 0.8
-        eveningBetMultiplier: 1.0,         // Giữ nguyên 1.0
-        nightBetMultiplier: 1.0,           // Giữ nguyên 1.0
-        skipOnConsecutiveFailures: true,   // Giữ nguyên
-        confidenceAdjustment: true,        // Giữ nguyên
-        minConfidenceAfterLoss: 0.75,      // Giữ nguyên 0.75
+        kellyFraction: 0.25,
+        maxRiskPerBet: 0.03,
+        timeBasedBetting: true,
+        morningBetMultiplier: 1.0,
+        afternoonBetMultiplier: 0.8,
+        eveningBetMultiplier: 1.0,
+        nightBetMultiplier: 1.0,
+        skipOnConsecutiveFailures: true,
+        confidenceAdjustment: true,
+        minConfidenceAfterLoss: 0.75,
         // Xử lý giai đoạn khó đoán
         difficultPeriodHandling: {
             enabled: true,
-            accuracyThreshold: 0.4,        // Xem là giai đoạn khó nếu độ chính xác < 40%
-            recentAccuracyThreshold: 0.45, // Ngưỡng hiệu suất gần đây để xác định giai đoạn khó
-            confidenceThreshold: 0.75,     // Ngưỡng tin cậy tối thiểu trong giai đoạn khó
-            betAmountMultiplier: 0.7,      // Giảm tiền cược còn 70%
-            minAccuracyToBet: 0.35,        // Độ chính xác tối thiểu để đặt cược
-            minSampleSize: 15              // Số mẫu tối thiểu để xác định độ chính xác
+            accuracyThreshold: 0.4,
+            recentAccuracyThreshold: 0.45,
+            confidenceThreshold: 0.75,
+            betAmountMultiplier: 0.7,
+            minAccuracyToBet: 0.35,
+            minSampleSize: 15
         }
     },
     
     // Cấu hình chống chuỗi thất bại liên tiếp
     streakBreaker: {
         enabled: true,
-        maxConsecutiveFailures: 3,          // Giữ nguyên
-        reverseAfterStreak: true,           // Giữ nguyên
-        reversalScope: "all",               // Giữ nguyên
-        maintainDirectionAfterLosses: true, // Giữ nguyên
-        longLossThreshold: 5,               // Giữ nguyên 5
-        consecutiveDirectionCount: 3,       // Giữ nguyên
+        maxConsecutiveFailures: 3,
+        reverseAfterStreak: true,
+        reversalScope: "all",
+        maintainDirectionAfterLosses: true,
+        longLossThreshold: 5,
+        consecutiveDirectionCount: 3,
         // Cải tiến xử lý đảo ngược thích ứng
         adaptiveReversal: {
-            enabled: true,                  // Kích hoạt đảo ngược thích ứng
-            activateAfterLosses: 4,         // Kích hoạt sau 4 lần thua liên tiếp
-            confidenceBoost: 0.1,           // Tăng độ tin cậy thêm 10%
-            maxReversals: 3,                // Số lần đảo ngược tối đa trong 1 phiên
-            minTimeBetweenReversals: 300000 // Thời gian tối thiểu giữa các lần đảo ngược (ms)
-        }
-    },
-    
-    // Cấu hình theo dõi và đánh theo chuỗi bệt
-    betStreakFollower: {
-        enabled: true,
-        activateAfterLosses: 2,          // Giữ nguyên 2
-        maxConsecutiveFailures: 2,        // Giữ nguyên 2 
-        minBetLength: 2,                  // Giữ nguyên 2
-        confidence: 0.82,                 // Giữ nguyên 0.82
-        priorityWeight: 0.65,             // Giữ nguyên 0.65
-        requireConfidentStreak: false,    // Giữ nguyên
-        // Học thích ứng từ lịch sử
-        adaptiveLearning: {
-            enabled: true,                // Kích hoạt học thích ứng
-            historyWeightDecay: 0.9,      // Hệ số suy giảm trọng số theo thời gian
-            minSamplesForAdjustment: 5,   // Số mẫu tối thiểu để điều chỉnh chiến lược
-            confidenceIncrement: 0.02,    // Tăng độ tin cậy sau mỗi lần dự đoán đúng
-            confidenceDecrement: 0.05,    // Giảm độ tin cậy sau mỗi lần dự đoán sai
-            maxConfidence: 0.95,          // Độ tin cậy tối đa
-            minConfidence: 0.65           // Độ tin cậy tối thiểu
+            enabled: true,
+            activateAfterLosses: 4,
+            confidenceBoost: 0.1,
+            maxReversals: 3,
+            minTimeBetweenReversals: 300000
         }
     },
     
@@ -147,24 +118,24 @@ const CONFIG = {
         enabled: true,
         // Phát hiện chuỗi bệt
         detection: {
-            minBetLength: 3,                   // Giữ nguyên
-            earlyDetectionThreshold: 2,        // Giữ nguyên
-            detectionWindowSize: 5,            // Giữ nguyên
-            confidentBetLength: 4,             // Giữ nguyên
-            checkSpecialHours: true,           // Giữ nguyên
-            betTaiHours: [16, 17, 19, 20],     // Giữ nguyên
-            betXiuHours: [14, 15, 18, 21]      // Giữ nguyên
+            minBetLength: 3,
+            earlyDetectionThreshold: 2,
+            detectionWindowSize: 5,
+            confidentBetLength: 4,
+            checkSpecialHours: true,
+            betTaiHours: [16, 17, 19, 20],
+            betXiuHours: [14, 15, 18, 21]
         },
         // Chiến lược đối phó
         strategy: {
-            reverseAfterBet: true,             // Giữ nguyên
-            increaseConfidence: true,          // Giữ nguyên
-            confidenceBoost: 0.12,             // Giữ nguyên
-            forceMethod: "BetBreaker",         // Giữ nguyên
-            skipAfterIncorrect: 1,             // Giữ nguyên
-            adaptiveInversion: true,           // Giữ nguyên
-            earlyDetectionConfidence: 0.72,    // Giữ nguyên
-            confidentDetectionConfidence: 0.85 // Giữ nguyên
+            reverseAfterBet: true,
+            increaseConfidence: true,
+            confidenceBoost: 0.12,
+            forceMethod: "BetBreaker",
+            skipAfterIncorrect: 1,
+            adaptiveInversion: true,
+            earlyDetectionConfidence: 0.72,
+            confidentDetectionConfidence: 0.85
         },
         // Phát hiện và xử lý chuỗi bệt đặc biệt
         specialBetPatterns: {
@@ -175,30 +146,30 @@ const CONFIG = {
         }
     },
     
-    // Phân tích theo khung giờ
+    // Phân tích theo khung giờ - Đã điều chỉnh
     timeAnalysis: {
-        enabled: true,
-        minSamplesRequired: 20,          // Số mẫu tối thiểu để áp dụng phân tích theo thời gian
+        enabled: false,  // Tắt vì không hiệu quả
+        minSamplesRequired: 20,
         segments: {
             morning: { 
-                enabled: true,
-                defaultPredictTai: false,  // Mặc định dự đoán Xỉu vào buổi sáng
-                confidenceBoost: 0.05      // Tăng độ tin cậy thêm 5%
+                enabled: false,
+                defaultPredictTai: false,
+                confidenceBoost: 0.05
             },
             afternoon: { 
-                enabled: true,
-                defaultPredictTai: true,   // Mặc định dự đoán Tài vào buổi trưa
-                confidenceBoost: 0.02      // Tăng độ tin cậy thêm 2%
+                enabled: false,
+                defaultPredictTai: true,
+                confidenceBoost: 0.02
             },
             evening: { 
-                enabled: true,
-                defaultPredictTai: false,  // Mặc định dự đoán Xỉu vào buổi chiều
-                confidenceBoost: 0.00      // Không điều chỉnh độ tin cậy
+                enabled: false,
+                defaultPredictTai: false,
+                confidenceBoost: 0.00
             },
             night: { 
-                enabled: true,
-                defaultPredictTai: true,   // Mặc định dự đoán Tài vào buổi tối
-                confidenceBoost: 0.04      // Tăng độ tin cậy thêm 4%
+                enabled: false,
+                defaultPredictTai: true,
+                confidenceBoost: 0.04
             }
         }
     },
@@ -207,17 +178,17 @@ const CONFIG = {
     specialEventDetection: {
         enabled: true,
         patternReplication: {
-            windowSize: 10,                // Kích thước cửa sổ phát hiện
-            minMatchRequired: 3,           // Số trùng khớp tối thiểu
-            baseConfidence: 0.75,          // Độ tin cậy cơ sở
-            confidencePerMatch: 0.05       // Tăng độ tin cậy theo số trùng khớp
+            windowSize: 10,
+            minMatchRequired: 3,
+            baseConfidence: 0.75,
+            confidencePerMatch: 0.05
         },
-        // Mới: Phát hiện sự kiện không điển hình
+        // Phát hiện sự kiện không điển hình
         anomalyDetection: {
             enabled: true,
-            windowSize: 20,                // Kích thước cửa sổ phát hiện
-            thresholdDeviation: 2.0,       // Ngưỡng độ lệch chuẩn
-            minConfidence: 0.7             // Độ tin cậy tối thiểu
+            windowSize: 20,
+            thresholdDeviation: 2.0,
+            minConfidence: 0.7
         }
     }
 };

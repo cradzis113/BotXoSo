@@ -1,11 +1,5 @@
-/**
- * NÂNG CẤP 5.5: Phân tích xu hướng dài (5-7 kỳ)
- */
-
 const fs = require('fs');
 const path = require('path');
-
-
 
 /**
  * Tạo mảng các số dự đoán với giá trị Tài / Xỉu tại vị trí chỉ định
@@ -215,378 +209,6 @@ function detectCyclicalReversals(history, index) {
     }
     
     // Không phát hiện mẫu rõ ràng
-    return { detected: false };
-}
-
-// 1. Cải thiện phát hiện đảo chiều sau chuỗi dài - PHIÊN BẢN NÂNG CAO
-function detectLongStreaks(history, index) {
-    if (history.length < 4) return { detected: false };
-    
-    // CẢI TIẾN 1: Mở rộng phạm vi phân tích từ 10 lên 15 kỳ
-    const maxResults = Math.min(15, history.length);
-    const results = history.slice(0, maxResults).map(item => item.numbers[index] >= 5 ? 'T' : 'X');
-    
-    // CẢI TIẾN 2: Tách ra từng chuỗi liên tục
-    const streaks = [];
-    let currentStreak = { type: results[0], length: 1, startPos: 0 };
-    
-    for (let i = 1; i < results.length; i++) {
-        if (results[i] === currentStreak.type) {
-            currentStreak.length++;
-        } else {
-            streaks.push({ ...currentStreak });
-            currentStreak = { type: results[i], length: 1, startPos: i };
-        }
-    }
-    
-    // Thêm chuỗi cuối cùng
-    streaks.push({ ...currentStreak });
-    
-    // CẢI TIẾN 3: Tìm chuỗi dài nhất trong 7 kỳ gần nhất
-    const recentStreaks = streaks.filter(s => s.startPos < 7);
-    const longestRecentStreak = recentStreaks.sort((a, b) => b.length - a.length)[0];
-    
-    if (!longestRecentStreak) {
-        return { detected: false };
-    }
-    
-    // CẢI TIẾN 4: Phân tích tỷ lệ đảo chiều sau chuỗi với độ dài tương tự
-    // Tạo danh sách các chuỗi tương tự trong quá khứ (không bao gồm chuỗi hiện tại)
-    const similarPastStreaks = streaks.filter(s => 
-        s.type === longestRecentStreak.type && 
-        Math.abs(s.length - longestRecentStreak.length) <= 1 && 
-        s.startPos > longestRecentStreak.startPos
-    );
-    
-    // CẢI TIẾN 5: Tính toán xác suất đảo chiều dựa trên dữ liệu thực tế
-    // Mặc định, xác suất đảo chiều tăng theo độ dài chuỗi từ 30% đến 80%
-    let reverseProb = Math.min(0.3 + (longestRecentStreak.length * 0.1), 0.8);
-    
-    // CẢI TIẾN 6: Tìm dữ liệu chuyển tiếp từ chuỗi tương tự trong quá khứ
-    if (similarPastStreaks.length > 0) {
-        let reversalCount = 0;
-        
-        for (const pastStreak of similarPastStreaks) {
-            const pastStreakEndPos = pastStreak.startPos + pastStreak.length - 1;
-            if (pastStreakEndPos + 1 < results.length) {
-                // Kiểm tra xem sau chuỗi có đảo chiều không
-                const reversed = results[pastStreakEndPos + 1] !== pastStreak.type;
-                if (reversed) reversalCount++;
-            }
-        }
-        
-        if (similarPastStreaks.length > 0) {
-            const empiricalReverseRate = reversalCount / similarPastStreaks.length;
-            reverseProb = (0.3 * reverseProb) + (0.7 * empiricalReverseRate);
-        }
-    }
-    
-    // CẢI TIẾN 7: Điều chỉnh xác suất dựa trên hiệu suất quá khứ
-    if (typeof global.getMethodSuccessRate === 'function') {
-        
-        // Dựa vào hiệu suất tổng thể thay vì một phương pháp cụ thể
-        const lastPerformance = global.getMethodSuccessRate("AdvancedCombination");
-        
-        if (lastPerformance < 0.45) {
-            reverseProb = 1 - reverseProb;
-        } else if (lastPerformance >= 0.6) {
-            // Nếu hiệu suất tốt, tăng độ tin cậy
-            // Đẩy xác suất xa hơn khỏi 0.5
-            if (reverseProb > 0.5) {
-                reverseProb = Math.min(0.9, reverseProb + 0.1);
-            } else if (reverseProb < 0.5) {
-                reverseProb = Math.max(0.1, reverseProb - 0.1);
-            }
-            console.log(`⚙️ Tăng độ tin cậy do hiệu suất cao (${(lastPerformance * 100).toFixed(1)}%)`);
-        }
-    }
-    
-    // CẢI TIẾN 8: Thêm phân tích bối cảnh toàn cục
-    // Phân tích xu hướng tổng thể
-    const taiCount = results.filter(r => r === 'T').length;
-    const xiuCount = results.length - taiCount;
-    const globalTaiDominance = taiCount / results.length;
-    
-    // Điều chỉnh xác suất theo xu hướng toàn cục
-    if (globalTaiDominance >= 0.65 && longestRecentStreak.type === 'T') {
-        // Xu hướng Tài mạnh + đang trong chuỗi Tài => giảm xác suất đảo chiều
-        reverseProb = Math.max(0.2, reverseProb - 0.15);
-        console.log(`⚙️ Giảm xác suất đảo chiều do xu hướng Tài mạnh (${(globalTaiDominance * 100).toFixed(1)}%)`);
-    } else if (globalTaiDominance <= 0.35 && longestRecentStreak.type === 'X') {
-        // Xu hướng Xỉu mạnh + đang trong chuỗi Xỉu => giảm xác suất đảo chiều
-        reverseProb = Math.max(0.2, reverseProb - 0.15);
-        console.log(`⚙️ Giảm xác suất đảo chiều do xu hướng Xỉu mạnh (${((1 - globalTaiDominance) * 100).toFixed(1)}%)`);
-    }
-    
-    // CẢI TIẾN 9: Tăng ngưỡng phát hiện chuỗi
-    const detectionThreshold = 2; // Tăng từ 1 lên 2 để chọn lọc hơn
-    
-    if (longestRecentStreak.length >= detectionThreshold) {
-        // Quyết định đảo chiều hay không
-        const shouldReverse = Math.random() < reverseProb;
-        
-        // CẢI TIẾN 10: Thêm độ tin cậy vào kết quả
-        return {
-            detected: true,
-            streakType: longestRecentStreak.type,
-            streakLength: longestRecentStreak.length,
-            confidence: Math.abs(reverseProb - 0.5) * 2, // Chuyển thành thang 0-1 
-            predictTai: shouldReverse ? (longestRecentStreak.type !== 'T') : (longestRecentStreak.type === 'T'),
-            reason: shouldReverse ? 
-                `Đảo chiều sau chuỗi ${longestRecentStreak.type} dài ${longestRecentStreak.length} kỳ (xác suất đảo: ${Math.round(reverseProb*100)}%)` : 
-                `Tiếp tục theo chuỗi ${longestRecentStreak.type} dài ${longestRecentStreak.length} kỳ (xác suất tiếp tục: ${Math.round((1-reverseProb)*100)}%)`
-        };
-    }
-    
-    return { detected: false };
-}
-
-// 2. Phát hiện mẫu hình xen kẽ ngắn - CẢI TIẾN PHIÊN BẢN 3.2
-function detectShortAlternatingPattern(history, index) {
-    if (history.length < 5) return { detected: false };
-    
-    const maxResults = Math.min(10, history.length);
-    const results = history.slice(0, maxResults).map(item => item.numbers[index] >= 5 ? 'T' : 'X');
-    
-    const weightedResults = [];
-    for (let i = 0; i < results.length; i++) {
-        // Tăng trọng số cho dữ liệu gần nhất, giảm mạnh cho dữ liệu cũ
-        const weight = Math.pow(0.70, i);  // Giảm nhanh hơn (từ 0.75 xuống 0.70)
-        weightedResults.push({
-            value: results[i],
-            weight: weight,
-            position: i
-        });
-    }
-    
-    // Phân tích cửa sổ trượt kích thước 3, 4 và 5
-    const slidingWindows = [];
-    
-    // Cửa sổ kích thước 3
-    for (let i = 0; i <= results.length - 3; i++) {
-        const window = results.slice(i, i + 3);
-        let alternations = 0;
-        for (let j = 0; j < window.length - 1; j++) {
-            if (window[j] !== window[j + 1]) alternations++;
-        }
-        slidingWindows.push({
-            window,
-            size: 3,
-            alternationRatio: alternations / (window.length - 1),
-            startPos: i
-        });
-    }
-    
-    // Cửa sổ kích thước 4
-    for (let i = 0; i <= results.length - 4; i++) {
-        const window = results.slice(i, i + 4);
-        let alternations = 0;
-        for (let j = 0; j < window.length - 1; j++) {
-            if (window[j] !== window[j + 1]) alternations++;
-        }
-        slidingWindows.push({
-            window,
-            size: 4,
-            alternationRatio: alternations / (window.length - 1),
-            startPos: i
-        });
-    }
-    
-    // Cửa sổ kích thước 5
-    for (let i = 0; i <= results.length - 5; i++) {
-        const window = results.slice(i, i + 5);
-        let alternations = 0;
-        for (let j = 0; j < window.length - 1; j++) {
-            if (window[j] !== window[j + 1]) alternations++;
-        }
-        slidingWindows.push({
-            window,
-            size: 5,
-            alternationRatio: alternations / (window.length - 1),
-            startPos: i
-        });
-    }
-    
-    // Sắp xếp cửa sổ theo tỷ lệ xen kẽ cao nhất và ưu tiên cửa sổ gần nhất
-    slidingWindows.sort((a, b) => {
-        // Ưu tiên cửa sổ có startPos = 0 (gần nhất)
-        if (a.startPos === 0 && b.startPos !== 0) return -1;
-        if (a.startPos !== 0 && b.startPos === 0) return 1;
-        
-        // Sau đó sắp xếp theo tỷ lệ xen kẽ
-        return b.alternationRatio - a.alternationRatio;
-    });
-    
-    if (slidingWindows.length > 0 && slidingWindows[0].alternationRatio > 0.70) {
-        const bestWindow = slidingWindows[0];
-        
-        // Nếu có mẫu xen kẽ hoàn hảo (100%)
-        if (bestWindow.alternationRatio >= 1.0) {
-            const predictedValue = bestWindow.window[0] !== bestWindow.window[1] ? 
-                bestWindow.window[0] : (bestWindow.window[0] === 'T' ? 'X' : 'T');
-            
-            return {
-                detected: true,
-                patternType: 'PerfectAlternating',
-                confidence: 0.9, // Giữ nguyên độ tin cậy cao cho mẫu hoàn hảo
-                predictTai: predictedValue === 'T',
-                reason: `Phát hiện mẫu xen kẽ hoàn hảo "${bestWindow.window.join('')}", dự đoán tiếp theo là ${predictedValue}`
-            };
-        }
-        // Nếu có mẫu xen kẽ tốt (70-99%)
-        else if (bestWindow.alternationRatio >= 0.70) {
-            // Dự đoán dựa trên xu hướng phổ biến nhất trong cửa sổ
-            const taiCount = bestWindow.window.filter(v => v === 'T').length;
-            const xiuCount = bestWindow.window.length - taiCount;
-            
-            // Nếu có xu hướng rõ ràng 
-            const threshold = Math.ceil(bestWindow.window.length * 0.6); // >60% là một xu hướng rõ ràng
-            if (taiCount >= threshold || xiuCount >= threshold) {
-                return {
-                    detected: true,
-                    patternType: 'StrongBiasInAlternating',
-                    confidence: 0.8,
-                    predictTai: taiCount > xiuCount,
-                    reason: `Phát hiện xu hướng mạnh ${taiCount > xiuCount ? 'Tài' : 'Xỉu'} (${Math.max(taiCount, xiuCount)}/${bestWindow.window.length}) trong mẫu xen kẽ`
-                };
-            }
-        }
-        
-        // Phân tích 3 kỳ gần nhất
-        const recentThree = results.slice(0, 3);
-        const pattern = recentThree.join('');
-        
-        // Phát hiện mẫu TXX và XTT
-        if (pattern === 'TXX' || results.slice(0, 4).join('') === 'TXXN' || results.slice(0, 4).join('') === 'TXXT') {
-            return {
-                detected: true,
-                patternType: 'TXX_Pattern',
-                confidence: 0.78, // Giảm từ 0.85 xuống 0.78 do hiệu suất không tốt
-                predictTai: true,
-                reason: `Phát hiện mẫu T-X-X, dự đoán tiếp theo là T`
-            };
-        } else if (pattern === 'XTT' || results.slice(0, 4).join('') === 'XTTN' || results.slice(0, 4).join('') === 'XTTX') {
-            return {
-                detected: true,
-                patternType: 'XTT_Pattern',
-                confidence: 0.78, // Giảm từ 0.85 xuống 0.78 do hiệu suất không tốt
-                predictTai: false,
-                reason: `Phát hiện mẫu X-T-T, dự đoán tiếp theo là X`
-            };
-        }
-        
-        // Phát hiện các mẫu khác
-        if (pattern === 'TTX' || pattern === 'TXT') {
-            return {
-                detected: true,
-                patternType: 'TTX_Pattern',
-                confidence: 0.72, // Giảm từ 0.75 xuống 0.72
-                predictTai: false,
-                reason: `Phát hiện mẫu ${pattern}, dự đoán tiếp theo là X`
-            };
-        } else if (pattern === 'XXT' || pattern === 'XTX') {
-            return {
-                detected: true,
-                patternType: 'XXT_Pattern', 
-                confidence: 0.72, // Giảm từ 0.75 xuống 0.72
-                predictTai: true,
-                reason: `Phát hiện mẫu ${pattern}, dự đoán tiếp theo là T`
-            };
-        }
-    }
-    
-    // CẢI TIẾN Điều chỉnh logic phát hiện đảo chiều sau chuỗi
-    if (results.length >= 3) {
-        // Phát hiện chuỗi 3 giá trị giống nhau
-        if (results[0] === results[1] && results[1] === results[2]) {
-            return {
-                detected: true,
-                patternType: 'ReversalAfterStreak',
-                confidence: 0.78, // Giảm từ 0.8 xuống 0.78
-                predictTai: results[0] !== 'T',
-                reason: `Phát hiện chuỗi ${results[0]}-${results[0]}-${results[0]}, dự đoán đảo chiều sang ${results[0] === 'T' ? 'X' : 'T'}`
-            };
-        }
-        
-        // CẢI TIẾN Ít phụ thuộc vào mẫu 2-streak do hiệu suất kém
-        // Chỉ áp dụng khi vị trí thứ 3 cùng loại với 2 vị trí đầu
-        else if (results[0] === results[1] && results.length >= 4 && results[2] === results[0]) {
-            return {
-                detected: true,
-                patternType: 'ReversalAfterLongerStreak',
-                confidence: 0.75,
-                predictTai: results[0] !== 'T',
-                reason: `Phát hiện chuỗi ${results[0]}-${results[0]}-${results[0]}, dự đoán đảo chiều sang ${results[0] === 'T' ? 'X' : 'T'}`
-            };
-        }
-    }
-    
-    // CẢI TIẾN Điều chỉnh phân tích phân phối Tài/Xỉu với trọng số
-    let weightedTaiSum = 0;
-    let totalWeight = 0;
-    
-    for (let i = 0; i < weightedResults.length; i++) {
-        totalWeight += weightedResults[i].weight;
-        if (weightedResults[i].value === 'T') {
-            weightedTaiSum += weightedResults[i].weight;
-        }
-    }
-    
-    const weightedTaiRatio = weightedTaiSum / totalWeight;
-    
-    // CẢI TIẾN Điều chỉnh ngưỡng phát hiện xu hướng mạnh
-    const strongTaiBias = weightedTaiRatio >= 0.70; // Tăng từ 0.65 lên 0.70
-    const strongXiuBias = weightedTaiRatio <= 0.30; // Giảm từ 0.35 xuống 0.30
-    
-    if (strongTaiBias || strongXiuBias) {
-        return {
-            detected: true,
-            patternType: 'WeightedDistribution',
-            confidence: Math.min(0.85, Math.abs(weightedTaiRatio - 0.5) * 2), // 0-0.85 scale
-            predictTai: strongTaiBias,
-            reason: `Phát hiện xu hướng ${strongTaiBias ? 'Tài' : 'Xỉu'} mạnh (${(Math.abs(weightedTaiRatio - 0.5) * 200).toFixed(1)}%) trong dữ liệu có trọng số`
-        };
-    }
-    
-    // CẢI TIẾN Tăng cường phân tích chẵn/lẻ bằng cách yêu cầu tỷ lệ rõ ràng hơn
-    if (results.length >= 6) {
-        // Tài/Xỉu tại các vị trí chẵn (0, 2, 4)
-        const evenPositions = [results[0], results[2], results[4]];
-        // Tài/Xỉu tại các vị trí lẻ (1, 3, 5)
-        const oddPositions = [results[1], results[3], results[5]];
-        
-        const evenTaiCount = evenPositions.filter(r => r === 'T').length;
-        const oddTaiCount = oddPositions.filter(r => r === 'T').length;
-        
-        // CẢI TIẾN Yêu cầu sự khác biệt lớn hơn giữa vị trí chẵn và lẻ
-        // Cần tối thiểu 3/3 vs 0/3 hoặc 0/3 vs 3/3
-        if ((evenTaiCount === 3 && oddTaiCount === 0) || (evenTaiCount === 0 && oddTaiCount === 3)) {
-            // Kiểm tra xem vị trí tiếp theo là chẵn hay lẻ
-            const isNextPositionEven = results.length % 2 === 0;
-            
-            if (isNextPositionEven) {
-                // Vị trí tiếp theo là chẵn, dự đoán dựa trên xu hướng vị trí chẵn
-                return {
-                    detected: true,
-                    patternType: 'EvenOddPattern',
-                    confidence: 0.82, // Tăng từ 0.75 lên 0.82 do yêu cầu nghiêm ngặt hơn
-                    predictTai: evenTaiCount > 0,
-                    reason: `Phát hiện xu hướng hoàn toàn ${evenTaiCount > 0 ? 'Tài' : 'Xỉu'} ở vị trí chẵn (${evenTaiCount}/3), vị trí tiếp theo là chẵn`
-                };
-            } else {
-                // Vị trí tiếp theo là lẻ, dự đoán dựa trên xu hướng vị trí lẻ
-                return {
-                    detected: true,
-                    patternType: 'EvenOddPattern',
-                    confidence: 0.82, // Tăng từ 0.75 lên 0.82 do yêu cầu nghiêm ngặt hơn
-                    predictTai: oddTaiCount > 0,
-                    reason: `Phát hiện xu hướng hoàn toàn ${oddTaiCount > 0 ? 'Tài' : 'Xỉu'} ở vị trí lẻ (${oddTaiCount}/3), vị trí tiếp theo là lẻ`
-                };
-            }
-        }
-    }
-    
-    // Nếu không có mẫu nào được phát hiện rõ ràng, trả về không phát hiện
     return { detected: false };
 }
 
@@ -1228,14 +850,83 @@ function detectAdaptivePattern(history, index = 0) {
             }
         }
         
+        // Thêm phân tích theo chuỗi Fibonacci
+        const fibonacciPattern = analyzeFibonacciSequence(recentHistory, 10);
+        if (fibonacciPattern.confidence > 0.7) {
+            return {
+                prediction: fibonacciPattern.prediction,
+                confidence: fibonacciPattern.confidence,
+                method: 'fibonacci_pattern',
+                reasoning: `Phát hiện mẫu Fibonacci với độ tin cậy ${fibonacciPattern.confidence.toFixed(2)}`
+            };
+        }
+        
+        // Thêm phân tích theo chu kỳ thời gian
+        const timeBasedPattern = analyzeTimeBasedPatterns(history, getCurrentTimeSegment());
+        if (timeBasedPattern.confidence > 0.65) {
+            return timeBasedPattern;
+        }
+        
         // Tiếp tục với logic phát hiện mẫu thông thường
-        // ... (giữ nguyên code hiện tại)
+        // ... (rest of the code remains unchanged)
     } catch (error) {
         console.error(`❌ Lỗi khi phân tích mẫu thích ứng: ${error.message}`);
         return { predictTai: null, confidence: 0, reason: "Lỗi khi phân tích mẫu thích ứng" };
     }
     
     return result;
+}
+
+// Hàm mới phân tích mẫu theo dãy Fibonacci
+function analyzeFibonacciSequence(results, depth) {
+    const fibSequence = [1, 1, 2, 3, 5, 8, 13, 21];
+    const recentPositions = results.slice(0, depth).map(r => r.position);
+    
+    // Tìm kiếm các mẫu Fibonacci trong chuỗi kết quả
+    let matchCount = 0;
+    for (let i = 0; i < recentPositions.length - 2; i++) {
+        if (recentPositions[i] + recentPositions[i+1] === recentPositions[i+2]) {
+            matchCount++;
+        }
+    }
+    
+    const confidence = matchCount / (recentPositions.length - 2);
+    let prediction = null;
+    
+    if (confidence > 0.5) {
+        // Dự đoán kết quả tiếp theo dựa trên quy luật Fibonacci
+        prediction = (recentPositions[0] + recentPositions[1]) % 2 === 0 ? 'tai' : 'xiu';
+    }
+    
+    return { prediction, confidence, method: 'fibonacci_pattern' };
+}
+
+// Hàm mới phân tích theo thời gian
+function analyzeTimeBasedPatterns(history, currentTimeSegment) {
+    const hourlyResults = history.filter(h => h.timeSegment === currentTimeSegment);
+    const last10Results = hourlyResults.slice(0, 10);
+    
+    // Tính tỷ lệ tài/xỉu trong khung giờ hiện tại
+    const taiCount = last10Results.filter(r => r.result === 'tai').length;
+    const xiuCount = last10Results.filter(r => r.result === 'xiu').length;
+    
+    let prediction = null;
+    let confidence = 0;
+    
+    if (taiCount > xiuCount * 1.5) {
+        prediction = 'tai';
+        confidence = 0.6 + (taiCount - xiuCount) / 20;
+    } else if (xiuCount > taiCount * 1.5) {
+        prediction = 'xiu';
+        confidence = 0.6 + (xiuCount - taiCount) / 20;
+    }
+    
+    return {
+        prediction,
+        confidence: Math.min(confidence, 0.85), // Giới hạn độ tin cậy tối đa
+        method: 'time_based_pattern',
+        reasoning: `Phân tích theo khung giờ: ${currentTimeSegment}, tài=${taiCount}, xỉu=${xiuCount}`
+    };
 }
 
 /**

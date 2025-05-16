@@ -213,38 +213,135 @@ function validateAccountSettings(accountInfo, accountFile, log = true) {
 }
 
 /**
- * Tính toán số tiền cược dựa trên chiến lược Martingale truyền thống
+ * Tính toán số tiền cược dựa trên chiến lược và thông tin tài khoản
+ * @param {Object} accountInfo - Thông tin tài khoản
+ * @param {boolean} log - Điều khiển hiển thị / ghi log
+ * @returns {number} Số tiền cược
  */
 function calculateBetAmount(accountInfo, log = true) {
-  if (!accountInfo || !accountInfo.betting) {
-    return 0;
-  }
+    try {
+        if (!accountInfo || !accountInfo.betting) {
+            if (log) console.log("⚠️ Thông tin tài khoản không hợp lệ, không thể tính số tiền cược");
+            return 0;
+        }
 
-  const baseBet = accountInfo.betting.baseBetAmount || 20000;
-  const consecutiveLosses = accountInfo.betting.consecutiveLosses || 0;
-  const maxMultiplier = accountInfo.betting.maxMultiplier || 6;
+        // Lấy thông tin từ tài khoản
+        const { demoMode, currentBalance, accountBalance, baseBetAmount, strategy, maxMultiplier, consecutiveLosses } = accountInfo.betting;
+        
+        // Xác định số dư hiện tại
+        const balance = (demoMode || currentBalance === 0) ? accountBalance : currentBalance;
+        
+        if (balance <= 0) {
+            if (log) console.log(`⚠️ Số dư tài khoản (${balance}) không hợp lệ, không thể tính số tiền cược`);
+            return 0;
+        }
+        
+        // Sử dụng Kelly criterion nâng cao nếu có thể
+        try {
+            const bettingModule = require('./betting');
+            if (typeof bettingModule.calculateOptimalBetAmount === 'function') {
+                // Đọc các thông tin cần thiết để tính toán Kelly
+                const dataDir = path.join(__dirname, '..', 'data');
+                const historyLogFile = path.join(dataDir, 'prediction_log.txt');
+                
+                // Tính tỷ lệ thắng gần đây
+                let winRate = 0.5;
+                try {
+                    const indexModule = require('./index');
+                    if (typeof indexModule.calculateRecentAccuracy === 'function') {
+                        const recentAccuracy = indexModule.calculateRecentAccuracy(historyLogFile, 20, false);
+                        winRate = typeof recentAccuracy === 'object' ? 
+                            (recentAccuracy.accuracy || recentAccuracy.correct / recentAccuracy.total) : 
+                            recentAccuracy;
+                    }
+                } catch (e) {
+                    console.log(`ℹ️ Không thể đọc tỷ lệ thắng gần đây: ${e.message}`);
+                }
+                
+                // Đọc lịch sử đặt cược
+                let history = [];
+                let volatility = 0.5;
+                try {
+                    const bettingHistory = bettingModule.readBetHistory();
+                    if (bettingHistory && Array.isArray(bettingHistory)) {
+                        history = bettingHistory;
+                        
+                        // Tính toán biến động thị trường
+                        const predictorModule = require('./predictor');
+                        if (typeof predictorModule.calculateMarketVolatility === 'function') {
+                            volatility = predictorModule.calculateMarketVolatility(history, 20);
+                        }
+                    }
+                } catch (e) {
+                    console.log(`ℹ️ Không thể đọc lịch sử đặt cược: ${e.message}`);
+                }
+                
+                // Tùy chọn cho Kelly calculator
+                const options = {
+                    odds: 1.95,
+                    riskTolerance: 0.25, // Thận trọng với 25% Kelly fraction
+                    minBetAmount: baseBetAmount,
+                    maxRiskPerBet: 0.05 // Tối đa 5% số dư cho mỗi lượt cược
+                };
+                
+                // Sử dụng công thức Kelly nâng cao để tính số tiền cược
+                const betAmount = bettingModule.calculateOptimalBetAmount(
+                    balance, 
+                    winRate,
+                    0.75, // Độ tin cậy mặc định
+                    volatility,
+                    consecutiveLosses,
+                    options,
+                    log
+                );
+                
+                if (log) console.log(`💰 Số tiền cược (Kelly): ${betAmount.toLocaleString('vi-VN')}đ`);
+                return betAmount;
+            }
+        } catch (error) {
+            if (log) console.log(`ℹ️ Không thể áp dụng Kelly criterion, sử dụng chiến lược martingale: ${error.message}`);
+            // Tiếp tục với chiến lược mặc định
+        }
+        
+        // FALLBACK: Sử dụng chiến lược Martingale nếu không áp dụng được Kelly
+        // Chiến lược Martingale: thua thì nhân đôi số tiền cược
+        let betAmount = baseBetAmount;
+        
+        // Áp dụng Martingale
+        if (strategy === 'martingale' && consecutiveLosses > 0) {
+            // Tính toán hệ số nhân
+            const multiplier = Math.min(Math.pow(2, consecutiveLosses), maxMultiplier);
+            betAmount = Math.round(baseBetAmount * multiplier);
+            
+            if (log) console.log(`🔢 Áp dụng martingale: Thua ${consecutiveLosses} lần liên tiếp, hệ số = ${multiplier}`);
+        }
+        
+        // Đảm bảo số tiền cược không lớn hơn số dư hiện có
+        if (betAmount > balance) {
+            if (log) console.log(`⚠️ Số tiền cược (${betAmount.toLocaleString('vi-VN')}đ) lớn hơn số dư (${balance.toLocaleString('vi-VN')}đ), điều chỉnh`);
+            betAmount = Math.min(betAmount, balance);
+        }
+        
+        // Áp dụng giới hạn mức cược tối đa (5% số dư)
+        const maxBetAmount = Math.round(balance * 0.05);
+        if (betAmount > maxBetAmount) {
+            if (log) console.log(`⚠️ Số tiền cược (${betAmount.toLocaleString('vi-VN')}đ) vượt quá 5% số dư, điều chỉnh xuống ${maxBetAmount.toLocaleString('vi-VN')}đ`);
+            betAmount = maxBetAmount;
+        }
+        
+        // Đảm bảo số tiền cược là bội số của 1000
+        betAmount = Math.floor(betAmount / 1000) * 1000;
+        
+        // Đảm bảo số tiền cược không nhỏ hơn mức tối thiểu
+        betAmount = Math.max(betAmount, 10000);
+        
+        if (log) console.log(`💰 Số tiền cược (Martingale): ${betAmount.toLocaleString('vi-VN')}đ`);
+        return betAmount;
 
-  let betAmount;
-  
-  // Martingale truyền thống: Nếu thắng hoặc mới bắt đầu thì dùng mức cược cơ bản
-  if (consecutiveLosses === 0) {
-    betAmount = baseBet;
-    if (log) console.log(`🧮 Martingale: Sử dụng mức cược cơ bản ${baseBet.toLocaleString('vi-VN')}đ`);
-  } else if (consecutiveLosses === maxMultiplier) {
-    // CẢI TIẾN: Nếu số lần thua chính xác bằng maxMultiplier, quay về mức cược cơ bản
-    betAmount = baseBet;
-    if (log) console.log(`🔄 Martingale: Đã đạt đúng giới hạn ${maxMultiplier} lần thua liên tiếp, quay về mức cược cơ bản ${baseBet.toLocaleString('vi-VN')}đ`);
-  } else if (consecutiveLosses > maxMultiplier) {
-    // Nếu vì lý do gì đó consecutiveLosses > maxMultiplier, cũng dùng mức cược cơ bản
-    betAmount = baseBet;
-    if (log) console.log(`🔄 Martingale: Đã vượt giới hạn ${maxMultiplier} lần thua liên tiếp, quay về mức cược cơ bản ${baseBet.toLocaleString('vi-VN')}đ`);
-  } else {
-    // Khi thua, áp dụng công thức Martingale: cơ bản * 2^số_lần_thua
-    betAmount = baseBet * Math.pow(2, consecutiveLosses);
-    if (log) console.log(`🧮 Martingale thua ${consecutiveLosses} lần: ${baseBet.toLocaleString('vi-VN')}đ × 2^${consecutiveLosses} = ${betAmount.toLocaleString('vi-VN')}đ`);
-  }
-
-  return betAmount;
+    } catch (error) {
+        if (log) console.error(`❌ Lỗi khi tính toán số tiền cược: ${error.message}`);
+        return 20000; // Trả về giá trị mặc định nếu có lỗi
+    }
 }
 
 /**

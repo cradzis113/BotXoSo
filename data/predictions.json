@@ -1,20 +1,20 @@
 {
-  "drawId": "202505152077",
-  "timestamp": "2025-05-15T16:24:19.102Z",
-  "doanTaiXiu": "Xỉu",
-  "prediction": false,
+  "drawId": "202505162078",
+  "timestamp": "2025-05-16T06:08:34.475Z",
+  "doanTaiXiu": "Tài",
+  "prediction": true,
   "method": "AdvancedCombination",
   "confidence": 0,
-  "reason": "Phát hiện xu hướng ưu thế X (80%)",
+  "reason": "Phát hiện 4 X liên tiếp, dự đoán đảo chiều",
   "numbers": [
-    1,
     6,
-    5,
     1,
-    0
+    8,
+    7,
+    8
   ],
-  "predictedValue": 1,
+  "predictedValue": 6,
   "targetIndex": 0,
-  "timeSegment": "latenight",
+  "timeSegment": "afternoon",
   "version": "v6.6.0"
 }

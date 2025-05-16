@@ -198,13 +198,47 @@ async function predict(page, history, index = 0, log = true) {
         if (page && canBet) {
             const loginSuccess = await account.autoLogin(page, accountInfo, accountFile, log);
             
-            if (loginSuccess) {
-                isLoggedIn = true;
-            } else {
-                isLoggedIn = false;
+            if (log && loginSuccess) console.log("✅ Đăng nhập thành công");
+            
+            // Nếu login mà số dư ít hơn 10k, tự động tắt betting
+            if (loginSuccess && !account.isDemoMode(accountInfo)) {
+                let balance = account.getAccountBalance ? account.getAccountBalance() : 0;
+                if (balance < 10000) {
+                    if (log) console.log(`⚠️ Số dư quá thấp: ${balance.toLocaleString('vi-VN')}đ, tắt chế độ đặt cược`);
+                    account.disableBetting(accountInfo, accountFile, `Số dư quá thấp: ${balance.toLocaleString('vi-VN')}đ`, log);
+                    return null;
+                }
             }
-        } else {
-            isLoggedIn = false;
+        }
+        
+        // THÊM: Phân tích mức độ khó của giai đoạn hiện tại
+        let difficultyLevel = 0.5;
+        try {
+            // Nếu đã implement hàm assessCurrentDifficulty
+            if (predictor.assessCurrentDifficulty) {
+                const difficultyAssessment = predictor.assessCurrentDifficulty(history, historyLogFile);
+                difficultyLevel = difficultyAssessment.difficulty;
+                
+                if (difficultyLevel > 0.7) {
+                    if (log) console.log(`⚠️ CẢNH BÁO: ${difficultyAssessment.reason}`);
+                } else if (difficultyLevel > 0.5) {
+                    if (log) console.log(`ℹ️ Lưu ý: ${difficultyAssessment.reason}`);
+                }
+            }
+        } catch (error) {
+            console.error(`❌ Lỗi khi phân tích độ khó: ${error.message}`);
+        }
+        
+        // THÊM: Kiểm tra chuỗi thua liên tiếp
+        const recentLosses = calculateRecentLosses(historyLogFile);
+        if (recentLosses >= 3 && log) {
+            console.log(`⚠️ Đang trong chuỗi thua ${recentLosses} lần liên tiếp, sẽ thận trọng hơn`);
+        }
+        
+        // THÊM: Bỏ qua lượt nếu đang trong giai đoạn rất khó
+        if (difficultyLevel > 0.75 && recentLosses >= 3) {
+            if (log) console.log("🛡️ Áp dụng chiến lược phòng thủ: bỏ qua lượt cược này do giai đoạn khó và đang thua liên tiếp");
+            return null;
         }
 
         try {

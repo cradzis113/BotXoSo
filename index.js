@@ -1,3 +1,13 @@
+/**
+ * BotXoSo - Hệ thống dự đoán tự động Tài/Xỉu
+ * Phiên bản v7.1.0 - Cải tiến phát hiện bệt sớm và phân tích xu hướng
+ * Tính năng mới:
+ * - Phát hiện sớm các chuỗi bệt đang hình thành
+ * - Phân tích độ mạnh và xu hướng kết quả
+ * - Nhận diện các mẫu đặc biệt từ dữ liệu thực tế
+ * - Cải thiện khả năng dự đoán sau các chuỗi bệt dài
+ */
+
 const connectDB = require('./config/database');
 const dataCollector = require('./collectors/dataCollector');
 const dataStorage = require('./database/dataStorage');

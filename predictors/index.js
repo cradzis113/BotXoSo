@@ -1,19 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
-
 const predictor = require('./predictor');
 const account = require('./account');
 const logger = require('./logger');
 const betting = require('./betting');
 const drawIdModule = require('./drawId');
 const config = require('./config');
-const betBreaker = require('./betBreaker');
 
 const {
-    detectCyclicalReversals,
-    detectFastPattern,
-    advancedCombinationPattern,
+    detectTaiXiuPatterns,
 } = predictor;
 
 const { clearPageMemory } = require('../betAutomatic');
@@ -319,60 +315,23 @@ async function predict(page, history, index = 0, log = true) {
                 console.log(`⚠️ Phát hiện đang trong khung giờ khó khăn, áp dụng chiến lược thận trọng`);
             }
             
-            // Thu thập dự đoán từ các phương pháp cơ bản
-            const cyclicalResult = detectCyclicalReversals(history, index);
-            if (cyclicalResult.confidence > 0) {
-                predictions.push({
-                    method: "CyclicalPattern",
-                    prediction: cyclicalResult.predictTai,
-                    confidence: cyclicalResult.confidence,
-                    reason: cyclicalResult.reason || "Xu hướng chu kỳ"
-                });
-            }
+            // Chỉ sử dụng phương pháp phát hiện mẫu Tài Xỉu mới
             
-            const fastPatternResult = detectFastPattern(history, index);
-            if (fastPatternResult.confidence > 0) {
+            // Thu thập dự đoán từ phương pháp mẫu Tài Xỉu
+            const taiXiuPatternsResult = detectTaiXiuPatterns(history, index);
+            if (taiXiuPatternsResult.confidence > 0) {
                 predictions.push({
-                    method: "FastPatternDetector",
-                    prediction: fastPatternResult.predictTai,
-                    confidence: fastPatternResult.confidence,
-                    reason: fastPatternResult.reason || "Mẫu nhanh"
-                });
-            }
-            
-            const advancedResult = advancedCombinationPattern(history, index);
-            if (advancedResult.confidence > 0) {
-                predictions.push({
-                    method: "AdvancedCombination",
-                    prediction: advancedResult.predictTai,
-                    confidence: advancedResult.confidence,
-                    reason: advancedResult.reason || "Kết hợp nâng cao"
-                });
-            }
-            
-            // Phát hiện chuỗi bệt
-            const betStreakResult = betBreaker.detectBetStreak(history, index);
-            if (betStreakResult.detected) {
-                // Thêm dự đoán từ phát hiện chuỗi bệt vào danh sách
-                predictions.push({
-                    method: "BetBreaker",
-                    prediction: betStreakResult.predictTai,
-                    confidence: betStreakResult.confidence,
-                    reason: betStreakResult.reason,
-                    betStreak: true,
-                    analysisMetrics: {
-                        betStreakDetected: true,
-                        betStreakType: betStreakResult.streakType,
-                        betStreakLength: betStreakResult.streakLength,
-                        isEarlyDetection: betStreakResult.isEarlyDetection || false
-                    }
+                    method: "TaiXiuPatterns",
+                    prediction: taiXiuPatternsResult.predictTai,
+                    confidence: taiXiuPatternsResult.confidence,
+                    reason: taiXiuPatternsResult.reason || "Mẫu Tài Xỉu phổ biến"
                 });
                 
-                // Tăng trọng số cho phương pháp phát hiện chuỗi bệt (nếu cần)
-                weights["BetBreaker"] = 0.9; // Ưu tiên cao cho phát hiện chuỗi bệt
+                // Thiết lập trọng số mặc định cho phương pháp mới
+                weights["TaiXiuPatterns"] = 0.98; // Ưu tiên cực cao cho mẫu Tài Xỉu
                 
                 if (log) {
-                    console.log(`🎯 ${betStreakResult.reason}`);
+                    console.log(`🧩 ${taiXiuPatternsResult.reason}`);
                 }
             }
 
@@ -422,28 +381,21 @@ async function predict(page, history, index = 0, log = true) {
             const highConfidencePredictions = predictions.filter(p => p.confidence >= confidenceThreshold);
             
             // Ưu tiên các phương pháp có hiệu quả cao
-            const priorityMethods = ["AdvancedCombination", "FastPatternDetector", "CyclicalPattern", "BetBreaker"];
+            const priorityMethods = ["TaiXiuPatterns"];
             
-            // Xác định phương pháp gây ra chuỗi thua (nếu có)
-            let blacklistedMethod = null;
-            if (recentLosses >= config.streakBreaker.maxConsecutiveFailures) {
-                blacklistedMethod = getRecentFailedMethod(historyLogFile);
-                if (blacklistedMethod && log) {
-                    console.log(`⚠️ Phát hiện phương pháp ${blacklistedMethod} gây ra chuỗi thua gần đây`);
-                }
-            }
+            // Không cần xác định phương pháp gây chuỗi thua vì chỉ có 1 phương pháp duy nhất
             
             if (highConfidencePredictions.length > 0) {
-                // Tìm kiếm dự đoán của phương pháp AdvancedCombination
-                const advancedPrediction = highConfidencePredictions.find(p => p.method === "AdvancedCombination");
+                // Tìm kiếm dự đoán của phương pháp TaiXiuPatterns
+                const taiXiuPrediction = highConfidencePredictions.find(p => p.method === "TaiXiuPatterns");
                 
-                // Nếu có dự đoán từ AdvancedCombination với độ tin cậy > 0.65, ưu tiên sử dụng
-                if (advancedPrediction && advancedPrediction.confidence > 0.65) {
-                    finalPrediction = advancedPrediction.prediction;
-                    selectedMethod = advancedPrediction.method;
-                    selectedReason = advancedPrediction.reason;
+                // Nếu có dự đoán từ TaiXiuPatterns với độ tin cậy cao, ưu tiên sử dụng
+                if (taiXiuPrediction && taiXiuPrediction.confidence > 0.75) {
+                    finalPrediction = taiXiuPrediction.prediction;
+                    selectedMethod = taiXiuPrediction.method;
+                    selectedReason = taiXiuPrediction.reason;
                     
-                    if (log) console.log(`🌟 Ưu tiên sử dụng phương pháp ${selectedMethod} với độ tin cậy ${advancedPrediction.confidence.toFixed(2)}`);
+                    if (log) console.log(`🌟 Ưu tiên sử dụng phương pháp ${selectedMethod} với độ tin cậy ${taiXiuPrediction.confidence.toFixed(2)}`);
                 } else {
                     // Tính toán điểm kết hợp cho mỗi dự đoán có độ tin cậy cao
                     for (const prediction of highConfidencePredictions) {
@@ -456,11 +408,7 @@ async function predict(page, history, index = 0, log = true) {
                             priorityBonus = 0.1;
                         }
                         
-                        // Nếu phương pháp nằm trong blacklist do gây ra chuỗi thua, giảm ưu tiên
-                        if (blacklistedMethod && prediction.method === blacklistedMethod && recentLosses > 1) {
-                            priorityBonus -= 0.2; // Phạt nặng nếu phương pháp gây ra chuỗi thua
-                            if (log) console.log(`🔻 Giảm ưu tiên cho phương pháp ${prediction.method} do gây ra chuỗi thua`);
-                        }
+                                                // Không cần xử lý blacklistedMethod vì chỉ có 1 phương pháp duy nhất
                         
                         // Điều chỉnh dự đoán trong khung giờ khó khăn
                         if (isDifficult && (prediction.method === "TimeBasedPattern")) {
@@ -508,8 +456,8 @@ async function predict(page, history, index = 0, log = true) {
                                  config.streakBreaker.maintainDirectionAfterLosses) {
                             
                             // Đối với chuỗi thua dài, không đảo ngược mà duy trì hướng dự đoán
-                            // Kiểm tra xem trong cache có dự đoán gần đây hay không
-                            const recentPredictionDirection = betBreaker.getPreviousPredictionDirection(historyLogFile);
+                            // Không sử dụng betBreaker.getPreviousPredictionDirection nữa
+                            const recentPredictionDirection = getPreviousPredictionFromLog(historyLogFile);
                             
                             if (recentPredictionDirection !== null) {
                                 // Duy trì cùng hướng dự đoán với lần gần nhất
@@ -842,15 +790,7 @@ function verifyPrediction(prediction, actualNumbers) {
             global.updateMethodPerformance(prediction.method, isCorrect);
         }
         
-        // Cập nhật thống kê xử lý bệt tài/xỉu (nếu áp dụng)
-        if (prediction.analysisMetrics && prediction.analysisMetrics.betStreakDetected) {
-            betBreaker.updateBetPerformance({
-                betStreak: true,
-                streakType: prediction.analysisMetrics.betStreakType,
-                streakLength: prediction.analysisMetrics.betStreakLength,
-                method: prediction.method
-            }, isCorrect);
-        }
+        // Đã loại bỏ tham chiếu đến betBreaker.updateBetPerformance
         
         // Trả về kết quả để có thể sử dụng ở nơi gọi hàm
         return {
@@ -1015,6 +955,37 @@ function isDifficultPeriod(logFile) {
     return (hour >= 11 && hour < 13) || (hour >= 16 && hour < 19);
 }
 
+/**
+ * Lấy hướng dự đoán trước đó từ file log
+ * @param {string} logFile - Đường dẫn tới file log
+ * @param {number} lines - Số dòng cần xem xét
+ * @returns {string|null} 'T' cho Tài, 'X' cho Xỉu, hoặc null nếu không tìm thấy
+ */
+function getPreviousPredictionFromLog(logFile, lines = 5) {
+    try {
+        if (!fs.existsSync(logFile)) return null;
+        
+        const data = fs.readFileSync(logFile, 'utf8');
+        const logLines = data.split('\n').filter(line => line.trim()).slice(0, lines);
+        
+        for (const line of logLines) {
+            if (line.includes('Dự đoán:')) {
+                // Tìm thông tin dự đoán
+                const match = line.match(/Dự đoán: \d+ \((Tài|Xỉu)\)/);
+                if (match) {
+                    const type = match[1];
+                    return type === 'Tài' ? 'T' : 'X';
+                }
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error(`❌ Lỗi khi đọc hướng dự đoán trước đó: ${error.message}`);
+        return null;
+    }
+}
+
 // Tạo các hàm toàn cục để các module khác có thể truy cập
 global.verifyPrediction = verifyPrediction;
 global.updateMethodPerformance = updateMethodPerformance;
@@ -1031,5 +1002,6 @@ module.exports = {
     getRecentFailedMethod,
     getCurrentTimeSegment,
     isDifficultPeriod,
-    calculateRecentAccuracy
+    calculateRecentAccuracy,
+    getPreviousPredictionFromLog
 };

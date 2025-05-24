@@ -6,12 +6,13 @@ const { predict, predictMultiple } = require('./predictors');
 const { getAllLotteryNumbers } = require('./database/dataAccess');
 const { openBettingPage, launchBrowser, getCountDownTime } = require('./betAutomatic');
 const { savePrediction } = require('./predictors/fileUtils');
+const { aggregatePredictions } = require('./predictors/predictionAggregator');
 
 // Cấu hình dự đoán
 const PREDICTION_CONFIG = {
   position: 0,                    // Vị trí cần dự đoán (0-4)
-  useMultipleStrategies: false,   // true: dùng nhiều chiến lược, false: dùng 1 chiến lược
-  strategy: 'default'    // 'auto' để tự động chọn theo giờ, hoặc tên chiến lược cụ thể
+  useMultipleStrategies: true,   // true: dùng nhiều chiến lược, false: dùng 1 chiến lược
+  strategy: 'short'    // 'auto' để tự động chọn theo giờ, hoặc tên chiến lược cụ thể
 };
 
 async function main() {
@@ -66,42 +67,38 @@ async function main() {
             // Sử dụng nhiều chiến lược
             const predictions = await predictMultiple(history, PREDICTION_CONFIG.position);
             
-            // Tính toán dự đoán cuối cùng
-            const predictionCounts = {};
-            predictions.forEach(p => {
-              predictionCounts[p.detail.prediction] = (predictionCounts[p.detail.prediction] || 0) + 1;
+            // Lấy lịch sử dự đoán của các chiến lược
+            const strategyHistory = {}; // TODO: Implement strategy history tracking
+            
+            // Sử dụng phương pháp tổng hợp mới
+            const aggregatedResult = aggregatePredictions(predictions, strategyHistory);
+            
+            console.log('\n🎊 Dự đoán cuối cùng:', aggregatedResult.prediction);
+            console.log(`   Độ tin cậy: ${(aggregatedResult.confidence * 100).toFixed(1)}%`);
+            console.log(`   Chi tiết: ${aggregatedResult.details}\n`);
+            
+            // Hiển thị điểm số cho từng số
+            console.log('   Phân tích điểm số:');
+            aggregatedResult.scores.forEach((score, number) => {
+              if (score > 0) {
+                console.log(`   ${number}: ${score.toFixed(3)} điểm`);
+              }
             });
-            
-            const finalPrediction = Object.entries(predictionCounts)
-              .reduce((a, b) => (b[1] > a[1] ? b : a))[0];
-            
-            const finalCount = Object.entries(predictionCounts)
-              .filter(([num]) => num === finalPrediction)
-              .map(([_, count]) => count)[0];
-            
-            // Tạo mô tả chi tiết về kết quả bình chọn
-            const voteDetails = Object.entries(predictionCounts)
-              .sort((a, b) => b[1] - a[1])
-              .map(([num, count]) => `${num}: ${count} phiếu`)
-              .join(', ');
-            
-            console.log('\n🎊 Dự đoán cuối cùng:', finalPrediction);
-            console.log(`   (${finalCount}/${predictions.length} chiến lược - ${(finalCount/predictions.length*100).toFixed(1)}%)`);
-            console.log(`   Chi tiết bình chọn: ${voteDetails}\n`);
             
             finalPredictionObject = {
               drawId: predictions[0].drawId,
               numbers: predictions[0].numbers.map((n, i) => 
-                i === PREDICTION_CONFIG.position ? finalPrediction : n
+                i === PREDICTION_CONFIG.position ? aggregatedResult.prediction : n
               ),
               detail: {
                 index: PREDICTION_CONFIG.position,
-                prediction: parseInt(finalPrediction),
-                reason: `Kết quả bình chọn từ ${predictions.length} chiến lược (${voteDetails})`,
+                prediction: aggregatedResult.prediction,
+                reason: aggregatedResult.details,
                 strategy: 'multiStrategy',
-                usedStrategy: 'multiVoting',
-                timeBasedStrategy: false,
-                votingDetails: predictionCounts,
+                usedStrategy: 'advancedAggregation',
+                timeBasedStrategy: true,
+                confidence: aggregatedResult.confidence,
+                scores: aggregatedResult.scores,
                 predictions: predictions.reduce((acc, p) => {
                   acc[p.detail.usedStrategy] = {
                     value: p.detail.prediction,
@@ -139,7 +136,8 @@ async function main() {
           console.error('❌ Lỗi khi tạo dự đoán:', error);
           return null;
         }
-      }
+      },
+      PREDICTION_CONFIG.position // Chỉ truyền position, không truyền strategy
     );
 
     process.on('SIGINT', async () => {

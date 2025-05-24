@@ -101,8 +101,8 @@ async function openBettingPage(browser) {
   return page;
 }
 
-async function getCountDownTime(page, getAllLotteryNumbers, predictFunction, position = 0, strategy = 'auto') {
-  console.log(`✅ Bắt đầu theo dõi countdown... (Vị trí dự đoán: ${position}, Chiến lược: ${strategy})`);
+async function getCountDownTime(page, getAllLotteryNumbers, predictFunction, position = 0) {
+  console.log(`✅ Bắt đầu theo dõi countdown... (Vị trí dự đoán: ${position})`);
 
   let isPredicting = false;
   let hasPredicted = false;
@@ -141,7 +141,7 @@ async function getCountDownTime(page, getAllLotteryNumbers, predictFunction, pos
 
         try {
           const history = await getAllLotteryNumbers();
-          const prediction = await predictFunction(history, position, strategy);
+          const prediction = await predictFunction(history);
           console.log("📈 Kết quả dự đoán:", prediction);
         } catch (error) {
           console.error("❌ Lỗi khi dự đoán:", error.message);

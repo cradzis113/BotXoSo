@@ -1,22 +1,14 @@
 const connectDB = require('./config/database');
 const dataCollector = require('./collectors/dataCollector');
 const dataStorage = require('./database/dataStorage');
-const predictors = require('./predictors/index');
+const { getAvailableStrategies } = require('./predictors/strategies');
+const { predict } = require('./predictors');
 const { getAllLotteryNumbers } = require('./database/dataAccess');
 const { openBettingPage, launchBrowser, getCountDownTime } = require('./betAutomatic');
 
-// Cấu hình cho thuật toán dự đoán - có thể dễ dàng thay đổi ở đây
 const PREDICTION_CONFIG = {
-  // Vị trí cần dự đoán (0-4)
   position: 0,
-  
-  // Chiến lược dự đoán:
-  // - 'default': Sử dụng 10 kết quả gần nhất
-  // - 'short': Sử dụng 5 kết quả gần nhất
-  // - 'veryshort': Sử dụng 3 kết quả gần nhất
-  // - 'combined': Kết hợp phân tích xu hướng ngắn hạn và dài hạn
-  // - 'auto': Tự động chọn chiến lược dựa trên khung giờ
-  strategy: 'auto'  // Thay đổi ở đây để sử dụng chiến lược khác
+  strategy: 'auto'  
 };
 
 async function main() {
@@ -25,11 +17,10 @@ async function main() {
     await dataCollector.initialize();
 
     // Hiển thị các chiến lược dự đoán có sẵn
-    const strategies = predictors.getAvailableStrategies();
+    const strategies = getAvailableStrategies();
     console.log('📋 Các chiến lược dự đoán có sẵn:');
     Object.keys(strategies).forEach(key => {
-      const strategy = strategies[key];
-      console.log(`   - ${key}: ${strategy.name} (${strategy.description})`);
+      console.log(`   - ${key}: ${strategies[key]}`);
     });
     
     console.log(`👉 Đang sử dụng chiến lược: ${PREDICTION_CONFIG.strategy}`);
@@ -53,7 +44,7 @@ async function main() {
     getCountDownTime(
       page, 
       getAllLotteryNumbers, 
-      predictors.predict,
+      predict,
       PREDICTION_CONFIG.position,
       PREDICTION_CONFIG.strategy
     );

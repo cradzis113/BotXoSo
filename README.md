@@ -4,45 +4,68 @@ Bot này giúp tự động dự đoán kết quả xổ số dựa trên phân 
 
 ## Tính Năng Mới
 
-Phiên bản cải tiến bổ sung các thuật toán dự đoán khác nhau cho phép thử nghiệm với các giới hạn dữ liệu đầu vào khác nhau:
+### 1. Sử dụng nhiều chiến lược đồng thời
+- Có thể chạy tất cả các chiến lược cùng một lúc
+- Tổng hợp kết quả dự đoán từ tất cả chiến lược
+- Hiển thị chi tiết số phiếu bầu cho mỗi con số
+- Chọn kết quả dựa trên số phiếu bầu cao nhất
 
-### Các chiến lược dự đoán có sẵn:
+### 2. Các chiến lược dự đoán có sẵn:
 
 1. **default**: Sử dụng 10 kết quả gần nhất (thuật toán gốc)
 2. **short**: Sử dụng 5 kết quả gần nhất
 3. **veryshort**: Sử dụng 3 kết quả gần nhất
 4. **combined**: Kết hợp phân tích xu hướng ngắn hạn (5 kết quả) và dài hạn (10 kết quả)
-5. **weightedShort**: Phân tích xu hướng ngắn hạn với trọng số cho kết quả gần đây (MỚI)
-6. **waveTrend**: Phân tích biên độ dao động và nhận diện xu hướng tăng/giảm (MỚI)
-7. **weightedCombined**: Kết hợp phân tích xu hướng với trọng số cao hơn cho kết quả gần đây (MỚI)
-8. **nightTrend**: Phương pháp đặc biệt cho khung giờ đêm khuya, ưu tiên xu hướng dài hạn (MỚI)
-9. **patternRecognition**: Tìm kiếm các mẫu lặp lại trong lịch sử 20-30 kết quả gần nhất (MỚI)
-10. **auto**: Tự động chọn chiến lược tối ưu dựa trên khung giờ
-11. **limited**: Kết hợp 2 thuật toán tốt nhất dựa trên phân tích điều kiện hiện tại (MỚI)
+5. **weightedShort**: Phân tích xu hướng ngắn hạn với trọng số cho kết quả gần đây
+6. **waveTrend**: Phân tích biên độ dao động và nhận diện xu hướng tăng/giảm
+7. **weightedCombined**: Kết hợp phân tích xu hướng với trọng số cao hơn cho kết quả gần đây
+8. **nightTrend**: Phương pháp đặc biệt cho khung giờ đêm khuya, ưu tiên xu hướng dài hạn
+9. **patternRecognition**: Tìm kiếm các mẫu lặp lại trong lịch sử 20-30 kết quả gần nhất
+10. **frequencyPattern**: Phân tích tần suất xuất hiện của các con số
+11. **adaptiveTime**: Tự điều chỉnh theo thời gian
+12. **limited**: Kết hợp 2 thuật toán tốt nhất dựa trên phân tích điều kiện hiện tại
 
-## Cách thay đổi chiến lược dự đoán
+## Cách thay đổi chế độ dự đoán
 
-Để thay đổi chiến lược dự đoán, hãy mở file `index.js` và chỉnh sửa giá trị của `strategy` trong biến `PREDICTION_CONFIG`:
+Để thay đổi chế độ dự đoán, hãy mở file `index.js` và chỉnh sửa cấu hình trong biến `PREDICTION_CONFIG`:
 
 ```javascript
 const PREDICTION_CONFIG = {
   // Vị trí cần dự đoán (0-4)
   position: 0,
   
-  // Chiến lược dự đoán:
-  // - 'default': Sử dụng 10 kết quả gần nhất
-  // - 'short': Sử dụng 5 kết quả gần nhất
-  // - 'veryshort': Sử dụng 3 kết quả gần nhất
-  // - 'combined': Kết hợp phân tích xu hướng ngắn hạn và dài hạn
-  // - 'weightedShort': Phân tích xu hướng ngắn hạn với trọng số 
-  // - 'waveTrend': Phân tích biên độ dao động và xu hướng tăng/giảm
-  // - 'weightedCombined': Kết hợp phân tích xu hướng với trọng số
-  // - 'nightTrend': Phương pháp đặc biệt cho khung giờ đêm khuya
-  // - 'patternRecognition': Tìm kiếm các mẫu lặp lại trong lịch sử
-  // - 'auto': Tự động chọn chiến lược dựa trên khung giờ
-  // - 'limited': Kết hợp 2 thuật toán tốt nhất theo điều kiện hiện tại
-  strategy: 'auto'  // Mặc định sử dụng chiến lược tự động
+  // Chọn chế độ dự đoán
+  useMultipleStrategies: false,  // true: dùng tất cả chiến lược, false: dùng 1 chiến lược
+  
+  // Chiến lược dự đoán khi useMultipleStrategies = false:
+  strategy: 'auto'  // 'auto' hoặc tên chiến lược cụ thể
 };
+```
+
+### Có 3 chế độ dự đoán:
+
+1. **Dùng một chiến lược cụ thể:**
+```javascript
+{
+  useMultipleStrategies: false,
+  strategy: 'weightedCombined'  // hoặc bất kỳ chiến lược nào khác
+}
+```
+
+2. **Dùng chế độ tự động theo giờ:**
+```javascript
+{
+  useMultipleStrategies: false,
+  strategy: 'auto'  // tự động chọn theo khung giờ
+}
+```
+
+3. **Dùng tất cả chiến lược:**
+```javascript
+{
+  useMultipleStrategies: true,
+  strategy: 'auto'  // không quan trọng khi useMultipleStrategies = true
+}
 ```
 
 ## Cách sử dụng
@@ -130,8 +153,38 @@ node index.js
 - Tối ưu hóa hiệu suất bằng cách giới hạn số lượng thuật toán sử dụng
 - Phù hợp cho mọi khung giờ và điều kiện thị trường
 
+## Chế độ đa chiến lược (Multiple Strategies)
+
+Khi bật chế độ `useMultipleStrategies: true`, bot sẽ:
+
+1. Chạy tất cả 12 chiến lược đồng thời
+2. Thu thập kết quả dự đoán từ mỗi chiến lược
+3. Thống kê số phiếu bầu cho mỗi con số
+4. Chọn con số được nhiều chiến lược bầu chọn nhất
+5. Hiển thị chi tiết:
+   - Dự đoán của từng chiến lược
+   - Thống kê số phiếu cho mỗi con số
+   - Tỷ lệ phần trăm ủng hộ cho con số được chọn
+
+Ví dụ kết quả:
+```
+🎯 Kết quả dự đoán từ tất cả chiến lược:
+   [default] 5 - Dự đoán theo xu hướng cơ bản
+   [short] 7 - Phân tích ngắn hạn
+   ...
+
+📈 Thống kê dự đoán:
+   Số 5: 4 chiến lược (33.3%)
+   Số 6: 2 chiến lược (16.7%)
+   Số 7: 6 chiến lược (50.0%)
+
+🎊 Dự đoán cuối cùng: 7
+   (6/12 chiến lược - 50.0%)
+```
+
 ## Ghi chú
 
-- Tất cả dự đoán được lưu trong file `data/prediction_log.txt`
+- Tất cả dự đoán được lưu trong file `data/predictions.json` và `data/prediction_log.txt`
+- Khi sử dụng chế độ đa chiến lược, file predictions.json sẽ lưu thêm thông tin chi tiết về kết quả của từng chiến lược
 - Bạn có thể theo dõi hiệu suất của từng chiến lược dự đoán bằng cách phân tích log
 - Sau khi thử nghiệm, bạn có thể chọn chiến lược hiệu quả nhất cho trường hợp sử dụng của mình 

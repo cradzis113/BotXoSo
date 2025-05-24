@@ -51,26 +51,28 @@ async function createPrediction(history, position, strategy = null) {
       
       // Ghi log thuật toán đang sử dụng và thời gian
       const now = new Date();
-      console.log(`[${now.toLocaleTimeString()}] Đang sử dụng thuật toán: ${selectedStrategy}`);
+      console.log(`[${now.toLocaleTimeString()}] 🔮 Chiến lược: ${selectedStrategy}`);
       
       // Thực thi thuật toán
       predictionDetail = algorithmFunction(history, position);
 
       // Kiểm tra xem thuật toán có trả về kết quả hợp lệ không
       if (!predictionDetail) {
-        console.error(`Thuật toán '${selectedStrategy}' không trả về kết quả hợp lệ`);
+        console.error(`❌ Thuật toán '${selectedStrategy}' không trả về kết quả hợp lệ`);
         // Dùng thuật toán mặc định nếu không nhận được kết quả
         predictionDetail = simpleFollowTrend(history, position);
-        console.log(`Đã sử dụng thuật toán dự phòng 'default'`);
+        console.log(`⚠️ Đã chuyển sang thuật toán dự phòng 'default'`);
+      } else {
+        console.log(`✨ Dự đoán: ${predictionDetail.prediction} (${predictionDetail.reason})`);
       }
     } catch (error) {
-      console.error(`Lỗi khi sử dụng thuật toán '${selectedStrategy}':`, error.message);
+      console.error(`❌ Lỗi khi sử dụng thuật toán '${selectedStrategy}':`, error.message);
       // Dùng thuật toán đơn giản nhất nếu có lỗi
       try {
         predictionDetail = simpleFollowTrendVeryShort(history, position);
-        console.log(`Đã sử dụng thuật toán dự phòng 'veryshort'`);
+        console.log(`⚠️ Đã chuyển sang thuật toán dự phòng 'veryshort'`);
       } catch (backupError) {
-        console.error('Không thể sử dụng thuật toán dự phòng:', backupError.message);
+        console.error('❌ Không thể sử dụng thuật toán dự phòng:', backupError.message);
 
         // Tạo một dự đoán ngẫu nhiên nếu mọi thứ đều thất bại
         const randomPrediction = Math.floor(Math.random() * 10);
@@ -79,7 +81,7 @@ async function createPrediction(history, position, strategy = null) {
           reason: `Không thể sử dụng thuật toán, dự đoán ngẫu nhiên (${randomPrediction >= 5 ? "Tài" : "Xỉu"})`,
           strategy: "Random"
         };
-        console.log('Đã tạo dự đoán ngẫu nhiên');
+        console.log('⚠️ Đã tạo dự đoán ngẫu nhiên');
       }
     }
 
@@ -102,12 +104,14 @@ async function createPrediction(history, position, strategy = null) {
       timestamp: new Date().toISOString()
     };
 
-    // Lưu dự đoán vào file
-    await savePrediction(prediction);
+    // Lưu dự đoán vào file nếu đây là chiến lược mặc định hoặc auto
+    if (strategy === null || strategy === 'auto') {
+      await savePrediction(prediction);
+    }
 
     return prediction;
   } catch (error) {
-    console.error('Lỗi khi tạo dự đoán:', error.message);
+    console.error('❌ Lỗi khi tạo dự đoán:', error.message);
     return null;
   }
 }

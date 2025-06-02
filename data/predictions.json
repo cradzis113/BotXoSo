@@ -1,0 +1,19 @@
+{
+  "drawId": "202506020237",
+  "numbers": [
+    "2",
+    "?",
+    "?",
+    "?",
+    "?"
+  ],
+  "detail": {
+    "index": 0,
+    "prediction": 2,
+    "reason": "3 kết quả gần nhất đều là Tài (9, 5, 5), dự đoán đổi chiều thành Xỉu",
+    "strategy": "SimpleFollowTrendVeryShort",
+    "usedStrategy": "veryshort",
+    "timeBasedStrategy": false
+  },
+  "timestamp": "2025-06-02T02:57:29.569Z"
+}

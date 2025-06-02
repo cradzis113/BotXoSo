@@ -11,8 +11,8 @@ const { aggregatePredictions } = require('./predictors/predictionAggregator');
 // Cấu hình dự đoán
 const PREDICTION_CONFIG = {
   position: 0,                    // Vị trí cần dự đoán (0-4)
-  useMultipleStrategies: true,   // true: dùng nhiều chiến lược, false: dùng 1 chiến lược
-  strategy: 'short'    // 'auto' để tự động chọn theo giờ, hoặc tên chiến lược cụ thể
+  useMultipleStrategies: false,   // true: dùng nhiều chiến lược, false: dùng 1 chiến lược
+  strategy: 'auto'    // 'auto' để tự động chọn theo giờ, hoặc tên chiến lược cụ thể
 };
 
 async function main() {

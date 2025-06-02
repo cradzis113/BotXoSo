@@ -1,4 +1,4 @@
-const Lottery = require('./models/lotteryModel'); // Sửa đường dẫn
+const Lottery = require('./models/lotteryModel'); 
 
 async function saveNumbers(lotteryData) {
     // Đảo ngược để xử lý từ kết quả cũ đến mới nhất
@@ -19,19 +19,6 @@ async function saveNumbers(lotteryData) {
                 await lotteryRecord.save();
                 console.log('Đã lưu kỳ:', item.drawId);
             } 
-
-            // Giới hạn số lượng bản ghi
-            const count = await Lottery.countDocuments();
-            if (count > 250) {
-                // Sử dụng createdAt thay vì timestamp
-                const oldestRecord = await Lottery.findOne().sort({ createdAt: 1 });
-                if (oldestRecord) {
-                    await Lottery.deleteOne({ _id: oldestRecord._id });
-                    console.log('Đã xóa bản ghi cũ nhất:', oldestRecord.drawId);
-                } else {
-                    console.log('Không tìm thấy bản ghi cũ nhất để xóa.');
-                }
-            }
         } catch (err) {
             console.error('Lỗi khi lưu vào DB:', err);
         }

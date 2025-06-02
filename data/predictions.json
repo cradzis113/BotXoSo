@@ -1,7 +1,7 @@
 {
-  "drawId": "202506020237",
+  "drawId": "202506020255",
   "numbers": [
-    "2",
+    "9",
     "?",
     "?",
     "?",
@@ -9,11 +9,11 @@
   ],
   "detail": {
     "index": 0,
-    "prediction": 2,
-    "reason": "3 kết quả gần nhất đều là Tài (9, 5, 5), dự đoán đổi chiều thành Xỉu",
-    "strategy": "SimpleFollowTrendVeryShort",
-    "usedStrategy": "veryshort",
+    "prediction": 9,
+    "reason": "Đa số kết quả gần đây là Tài (4/5) và biên độ dao động thấp (0.5), dự đoán Tài",
+    "strategy": "WaveTrend",
+    "usedStrategy": "waveTrend",
     "timeBasedStrategy": false
   },
-  "timestamp": "2025-06-02T02:57:29.569Z"
+  "timestamp": "2025-06-02T03:10:59.413Z"
 }

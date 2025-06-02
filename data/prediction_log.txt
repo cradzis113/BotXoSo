@@ -1,3 +1,6 @@
+[10:10:59 02/06/2025] - 202506020254 - Du doan: 4 (Xiu) | So thuc te: 4 (Xiu) | [Dung] | Phuong phap: WaveTrend | Vi tri: 0
+[10:10:12 02/06/2025] - 202506020253 - Du doan: 7 (Tai) | So thuc te: 5 (Tai) | [Dung] | Phuong phap: WaveTrend | Vi tri: 0
+[10:09:29 02/06/2025] - 202506020252 - Du doan: 8 (Tai) | So thuc te: 6 (Tai) | [Dung] | Phuong phap: WaveTrend | Vi tri: 0
 [09:57:29 02/06/2025] - 202506020236 - Du doan: 0 (Xiu) | So thuc te: 9 (Tai) | [Sai] | Phuong phap: SimpleFollowTrendVeryShort | Vi tri: 0
 [23:44:33 25/05/2025] - 202505251339 - Du doan: 0 (Xiu) | So thuc te: 3 (Xiu) | [Dung] | Phuong phap: NightFollowTrend | Vi tri: 0
 [23:43:47 25/05/2025] - 202505251338 - Du doan: 4 (Xiu) | So thuc te: 4 (Xiu) | [Dung] | Phuong phap: NightFollowTrend | Vi tri: 0
